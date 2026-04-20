@@ -28,9 +28,8 @@ exports.handler = async (event) => {
   try {
     const token = await getBEToken();
 
-    // Booking Engine API - liste filtrée par listingId avec nightlyRates et allotment
-    const fields = "_id nickname title nightlyRates allotment";
-    const url = `https://booking.guesty.com/api/listings?limit=100`;
+    // Endpoint calendrier dédié par listing
+    const url = `https://booking.guesty.com/api/listings/${listingId}/calendar?startDate=${startDate}&endDate=${endDate}`;
 
     const res = await fetch(url, {
       headers: {
@@ -51,46 +50,23 @@ exports.handler = async (event) => {
 
     const data = await res.json();
 
-    // DEBUG - retourne la réponse brute pour inspection
-    return {
-      statusCode: 200,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      body: JSON.stringify({ DEBUG_RAW: data }),
-    };
-
-    // La réponse est { results: [...] } - on cherche notre listing
-    const listing = (data.results || []).find(l => l._id === listingId) || data.results?.[0] || {};
-
-    // nightlyRates = { "2025-06-01": 250, ... }
-    // allotment    = { "2025-06-01": 1, ... }
-    const nightlyRates = listing.nightlyRates || {};
-    const allotment = listing.allotment || {};
-
-    // Génère un tableau de jours entre startDate et endDate
-    const days = [];
-    const current = new Date(startDate);
-    const end = new Date(endDate);
-
-    while (current < end) {
-      const dateStr = current.toISOString().split("T")[0];
-      const price = nightlyRates[dateStr] ?? null;
-      const avail = allotment[dateStr];
-      const available = typeof avail === "number" ? avail > 0 : price !== null;
-
-      days.push({
-        date: dateStr,
+    // Transforme la réponse brute en tableau de jours normalisés
+    const days = (data.days || data.data || []).map((day) => {
+      const available = !day.blocks && day.status !== "unavailable" && day.status !== "booked";
+      return {
+        date: day.date,
         available,
-        price,
+        price: day.price || day.basePrice || null,
         currency: "CAD",
-      });
-
-      current.setDate(current.getDate() + 1);
-    }
+        status: day.status || null,
+        minNights: day.minNights || null,
+      };
+    });
 
     return {
       statusCode: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      body: JSON.stringify({ listingId, startDate, endDate, days }),
+      body: JSON.stringify({ listingId, startDate, endDate, days, _raw: data }),
     };
   } catch (err) {
     console.error("Calendar function error:", err);
