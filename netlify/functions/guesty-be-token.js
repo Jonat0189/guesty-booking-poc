@@ -1,20 +1,21 @@
-const { getStore } = require("@netlify/blobs");
+const fs = require("fs");
+const path = require("path");
 
-const TOKEN_KEY = "guesty_be_token";
+const TOKEN_FILE = path.join("/tmp", "guesty_be_token.json");
 
 async function getBEToken() {
-  const store = getStore("guesty-tokens");
   const now = Date.now();
 
-  // Essaie de récupérer le token depuis Netlify Blobs
+  // Essaie de lire le token depuis /tmp
   try {
-    const cached = await store.get(TOKEN_KEY, { type: "json" });
+    const raw = fs.readFileSync(TOKEN_FILE, "utf8");
+    const cached = JSON.parse(raw);
     if (cached && cached.token && cached.expiresAt && now < cached.expiresAt - 5 * 60 * 1000) {
-      console.log("Using cached BE token");
+      console.log("Using cached BE token from /tmp");
       return cached.token;
     }
   } catch (err) {
-    console.log("No cached token found, fetching new one");
+    console.log("No valid cached token, fetching new one");
   }
 
   // Fetch nouveau token
@@ -46,10 +47,10 @@ async function getBEToken() {
   const token = data.access_token;
   const expiresAt = now + (data.expires_in || 86400) * 1000;
 
-  // Sauvegarde dans Netlify Blobs
+  // Sauvegarde dans /tmp
   try {
-    await store.setJSON(TOKEN_KEY, { token, expiresAt });
-    console.log("BE token cached in Netlify Blobs");
+    fs.writeFileSync(TOKEN_FILE, JSON.stringify({ token, expiresAt }), "utf8");
+    console.log("BE token cached in /tmp");
   } catch (err) {
     console.error("Failed to cache token:", err.message);
   }
