@@ -28,8 +28,9 @@ exports.handler = async (event) => {
   try {
     const token = await getBEToken();
 
-    // Endpoint calendrier optimisé de l'Open API
-    const url = `https://open-api.guesty.com/v1/availability-pricing/api/calendar/listings/minified/${listingId}?startDate=${startDate}&endDate=${endDate}&view=full`;
+    // Booking Engine API - listing avec nightlyRates et allotment par date
+    const fields = "_id nickname title nightlyRates allotment";
+    const url = `https://booking.guesty.com/api/listings/${listingId}?checkIn=${startDate}&checkOut=${endDate}&fields=${encodeURIComponent(fields)}`;
 
     const res = await fetch(url, {
       headers: {
@@ -50,20 +51,31 @@ exports.handler = async (event) => {
 
     const data = await res.json();
 
-    // Transforme la réponse pour le frontend : tableau de jours avec date, prix, dispo
-    const days = (data.days || []).map((day) => {
-      const isAvailable =
-        typeof day.allotment === "number" ? day.allotment > 0 : day.status === "available";
+    // nightlyRates = { "2025-06-01": 250, "2025-06-02": 275, ... }
+    // allotment    = { "2025-06-01": 1,   "2025-06-02": 0,   ... }
+    const nightlyRates = data.nightlyRates || {};
+    const allotment = data.allotment || {};
 
-      return {
-        date: day.date,
-        available: isAvailable,
-        price: day.price || null,
-        currency: day.currency || "CAD",
-        minNights: day.minNights || null,
-        status: day.status,
-      };
-    });
+    // Génère un tableau de jours entre startDate et endDate
+    const days = [];
+    const current = new Date(startDate);
+    const end = new Date(endDate);
+
+    while (current < end) {
+      const dateStr = current.toISOString().split("T")[0];
+      const price = nightlyRates[dateStr] ?? null;
+      const avail = allotment[dateStr];
+      const available = typeof avail === "number" ? avail > 0 : price !== null;
+
+      days.push({
+        date: dateStr,
+        available,
+        price,
+        currency: "CAD",
+      });
+
+      current.setDate(current.getDate() + 1);
+    }
 
     return {
       statusCode: 200,
