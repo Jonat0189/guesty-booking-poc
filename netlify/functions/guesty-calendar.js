@@ -51,6 +51,13 @@ exports.handler = async (event) => {
 
     const data = await res.json();
 
+    // DEBUG - retourne la réponse brute pour inspection
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      body: JSON.stringify({ DEBUG_RAW: data }),
+    };
+
     // La réponse est { results: [...] } - on cherche notre listing
     const listing = (data.results || []).find(l => l._id === listingId) || data.results?.[0] || {};
 
