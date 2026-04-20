@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BESIDE — Guesty Booking POC</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; color: #1a1a18; min-height: 100vh; padding: 40px 20px; }
+    .container { max-width: 860px; margin: 0 auto; }
+    h1 { font-size: 22px; font-weight: 500; margin-bottom: 6px; }
+    .subtitle { color: #666; font-size: 14px; margin-bottom: 36px; }
+    .card { background: white; border-radius: 12px; padding: 28px; margin-bottom: 24px; border: 1px solid #e8e6e0; }
+    .card h2 { font-size: 15px; font-weight: 500; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #f0ede8; color: #444; text-transform: uppercase; letter-spacing: 0.05em; font-size: 12px; }
+    .form-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 13px; color: #555; font-weight: 500; }
+    input, select { padding: 9px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: white; color: #1a1a18; }
+    input:focus, select:focus { outline: none; border-color: #2d5a3d; }
+    button { padding: 9px 20px; background: #2d5a3d; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; transition: background 0.15s; }
+    button:hover { background: #234830; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    .result { margin-top: 20px; }
+    .result-label { font-size: 12px; color: #888; margin-bottom: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+    pre { background: #f8f7f4; border: 1px solid #e8e6e0; border-radius: 8px; padding: 16px; font-size: 12px; overflow-x: auto; line-height: 1.6; color: #333; max-height: 400px; overflow-y: auto; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 16px; }
+    .cal-header { text-align: center; font-size: 11px; font-weight: 600; color: #888; padding: 4px; text-transform: uppercase; }
+    .cal-day { border-radius: 6px; padding: 6px 4px; text-align: center; font-size: 12px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+    .cal-day.available { background: #eef5f1; border: 1px solid #c5ddd0; cursor: pointer; }
+    .cal-day.available:hover { background: #d4ecdf; }
+    .cal-day.unavailable { background: #f5f5f5; color: #bbb; border: 1px solid #eee; }
+    .cal-day.empty { background: transparent; border: none; }
+    .cal-day.selected { background: #2d5a3d; color: white; border-color: #2d5a3d; }
+    .cal-day .day-num { font-weight: 600; font-size: 13px; }
+    .cal-day .day-price { font-size: 10px; color: #2d5a3d; }
+    .cal-day.selected .day-price { color: #a8d4bc; }
+    .cal-day.unavailable .day-price { color: #ccc; }
+    .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .month-nav h3 { font-size: 15px; font-weight: 500; }
+    .month-nav button { padding: 6px 12px; font-size: 13px; }
+    .quote-summary { background: #eef5f1; border: 1px solid #c5ddd0; border-radius: 10px; padding: 20px; margin-top: 16px; }
+    .quote-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; border-bottom: 1px solid #d8edd6; }
+    .quote-row:last-child { border-bottom: none; font-weight: 600; font-size: 15px; padding-top: 10px; }
+    .quote-id { font-size: 11px; color: #888; margin-top: 10px; }
+    .status { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .status.loading { background: #fff3cd; color: #856404; }
+    .status.success { background: #d1e7dd; color: #0a3622; }
+    .status.error { background: #f8d7da; color: #58151c; }
+    .selected-dates { font-size: 13px; color: #2d5a3d; font-weight: 500; margin-top: 8px; min-height: 20px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>BESIDE — Guesty Booking Engine POC</h1>
+  <p class="subtitle">Test des endpoints : calendrier, disponibilités, et création de quote · Habitat Lanaudière</p>
+
+  <!-- Calendrier -->
+  <div class="card">
+    <h2>Étape 1 — Calendrier et disponibilités</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Listing ID</label>
+        <input type="text" id="listingId" value="65ef494bff172e00129d081f" style="width:220px">
+      </div>
+      <div class="form-group">
+        <label>Nombre de voyageurs</label>
+        <select id="guestsCount">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+        </select>
+      </div>
+      <button onclick="loadCalendar()">Charger le calendrier</button>
+    </div>
+
+    <div class="month-nav" id="monthNav" style="display:none">
+      <button onclick="prevMonth()">← Préc.</button>
+      <h3 id="monthTitle"></h3>
+      <button onclick="nextMonth()">Suiv. →</button>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+    <div class="selected-dates" id="selectedDates"></div>
+
+    <div class="result" id="calResult" style="display:none">
+      <div class="result-label">Réponse brute API</div>
+      <pre id="calRaw"></pre>
+    </div>
+  </div>
+
+  <!-- Quote -->
+  <div class="card">
+    <h2>Étape 2 — Créer un quote</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Check-in</label>
+        <input type="date" id="checkIn">
+      </div>
+      <div class="form-group">
+        <label>Check-out</label>
+        <input type="date" id="checkOut">
+      </div>
+      <button onclick="createQuote()" id="quoteBtn">Créer le quote</button>
+    </div>
+    <div id="quoteStatus"></div>
+    <div class="quote-summary" id="quoteSummary" style="display:none"></div>
+    <div class="result" id="quoteResult" style="display:none">
+      <div class="result-label">Réponse brute API</div>
+      <pre id="quoteRaw"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+  // State
+  let allDays = [];
+  let currentYear, currentMonth;
+  let selectedCheckIn = null, selectedCheckOut = null;
+
+  function setStatus(el, type, msg) {
+    el.innerHTML = `<span class="status ${type}">${msg}</span>`;
+  }
+
+  // --- CALENDRIER ---
+  async function loadCalendar() {
+    const listingId = document.getElementById('listingId').value.trim();
+    if (!listingId) return alert('Listing ID requis');
+
+    const now = new Date();
+    currentYear = now.getFullYear();
+    currentMonth = now.getMonth();
+
+    const startDate = formatDate(now);
+    const endDate = formatDate(new Date(now.getFullYear(), now.getMonth() + 3, 0));
+
+    document.getElementById('calResult').style.display = 'none';
+
+    try {
+      const res = await fetch(`/.netlify/functions/guesty-calendar?listingId=${listingId}&startDate=${startDate}&endDate=${endDate}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        document.getElementById('calResult').style.display = 'block';
+        document.getElementById('calRaw').textContent = JSON.stringify(data, null, 2);
+        return;
+      }
+
+      allDays = data.days || [];
+      document.getElementById('calResult').style.display = 'block';
+      document.getElementById('calRaw').textContent = JSON.stringify(data, null, 2);
+      document.getElementById('monthNav').style.display = 'flex';
+      renderCalendar();
+    } catch (err) {
+      alert('Erreur: ' + err.message);
+    }
+  }
+
+  function renderCalendar() {
+    const title = new Date(currentYear, currentMonth, 1)
+      .toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
+    document.getElementById('monthTitle').textContent = title.charAt(0).toUpperCase() + title.slice(1);
+
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
+
+    ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'].forEach(d => {
+      grid.innerHTML += `<div class="cal-header">${d}</div>`;
+    });
+
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    for (let i = 0; i < firstDay; i++) {
+      grid.innerHTML += `<div class="cal-day empty"></div>`;
+    }
+
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = formatDate(new Date(currentYear, currentMonth, d));
+      const dayData = allDays.find(x => x.date === dateStr);
+      const available = dayData?.available ?? false;
+      const price = dayData?.price;
+
+      let cls = available ? 'available' : 'unavailable';
+      if (dateStr === selectedCheckIn || dateStr === selectedCheckOut) cls += ' selected';
+
+      const priceStr = price ? `${Math.round(price)}$` : '';
+      grid.innerHTML += `
+        <div class="cal-day ${cls}" data-date="${dateStr}" onclick="selectDate('${dateStr}', ${available})">
+          <span class="day-num">${d}</span>
+          ${priceStr ? `<span class="day-price">${priceStr}</span>` : ''}
+        </div>`;
+    }
+  }
+
+  function selectDate(dateStr, available) {
+    if (!available) return;
+    if (!selectedCheckIn || (selectedCheckIn && selectedCheckOut)) {
+      selectedCheckIn = dateStr;
+      selectedCheckOut = null;
+    } else if (dateStr > selectedCheckIn) {
+      selectedCheckOut = dateStr;
+      // Pré-remplir le formulaire quote
+      document.getElementById('checkIn').value = selectedCheckIn;
+      document.getElementById('checkOut').value = selectedCheckOut;
+    } else {
+      selectedCheckIn = dateStr;
+      selectedCheckOut = null;
+    }
+    updateSelectedDates();
+    renderCalendar();
+  }
+
+  function updateSelectedDates() {
+    const el = document.getElementById('selectedDates');
+    if (selectedCheckIn && selectedCheckOut) {
+      const nights = Math.round((new Date(selectedCheckOut) - new Date(selectedCheckIn)) / 86400000);
+      el.textContent = `Sélection : ${selectedCheckIn} → ${selectedCheckOut} (${nights} nuit${nights > 1 ? 's' : ''})`;
+    } else if (selectedCheckIn) {
+      el.textContent = `Check-in : ${selectedCheckIn} — cliquez une date de départ`;
+    } else {
+      el.textContent = '';
+    }
+  }
+
+  function prevMonth() {
+    currentMonth--;
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    renderCalendar();
+  }
+
+  function nextMonth() {
+    currentMonth++;
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    renderCalendar();
+  }
+
+  // --- QUOTE ---
+  async function createQuote() {
+    const listingId = document.getElementById('listingId').value.trim();
+    const checkIn = document.getElementById('checkIn').value;
+    const checkOut = document.getElementById('checkOut').value;
+    const guestsCount = parseInt(document.getElementById('guestsCount').value);
+    const statusEl = document.getElementById('quoteStatus');
+    const btn = document.getElementById('quoteBtn');
+
+    if (!checkIn || !checkOut) return alert('Sélectionnez des dates dans le calendrier ou entrez-les manuellement');
+
+    btn.disabled = true;
+    setStatus(statusEl, 'loading', 'Création du quote en cours...');
+    document.getElementById('quoteSummary').style.display = 'none';
+    document.getElementById('quoteResult').style.display = 'none';
+
+    try {
+      const res = await fetch('/.netlify/functions/guesty-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId, checkIn, checkOut, guestsCount }),
+      });
+
+      const data = await res.json();
+      document.getElementById('quoteResult').style.display = 'block';
+      document.getElementById('quoteRaw').textContent = JSON.stringify(data, null, 2);
+
+      if (!res.ok) {
+        setStatus(statusEl, 'error', `Erreur ${res.status}: ${data.error}`);
+        return;
+      }
+
+      setStatus(statusEl, 'success', 'Quote créé avec succès ✓');
+      renderQuoteSummary(data);
+    } catch (err) {
+      setStatus(statusEl, 'error', 'Erreur réseau: ' + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderQuoteSummary(data) {
+    if (!data.recommended) return;
+    const plan = data.ratePlans?.[0];
+    if (!plan) return;
+
+    const m = plan.money;
+    const cur = m.currency || 'CAD';
+    const fmt = (v) => v != null ? `${Math.round(v).toLocaleString('fr-CA')} ${cur}` : '—';
+
+    const nights = Math.round((new Date(data.checkOut) - new Date(data.checkIn)) / 86400000);
+    const items = (m.invoiceItems || [])
+      .filter(i => i.amount > 0)
+      .map(i => `<div class="quote-row"><span>${i.title}</span><span>${fmt(i.amount)}</span></div>`)
+      .join('');
+
+    document.getElementById('quoteSummary').style.display = 'block';
+    document.getElementById('quoteSummary').innerHTML = `
+      <div class="quote-row"><span>Séjour (${nights} nuit${nights>1?'s':''})</span><span>${fmt(m.fareAccommodation)}</span></div>
+      <div class="quote-row"><span>Ménage</span><span>${fmt(m.fareCleaning)}</span></div>
+      ${items}
+      ${m.totalTaxes ? `<div class="quote-row"><span>Taxes</span><span>${fmt(m.totalTaxes)}</span></div>` : ''}
+      <div class="quote-row"><span>Total</span><span>${fmt(m.hostPayout)}</span></div>
+      <div class="quote-id">Quote ID : ${data.quoteId} · Expire : ${new Date(data.expiresAt).toLocaleString('fr-CA')}</div>
+    `;
+  }
+
+  function formatDate(d) {
+    return d.toISOString().split('T')[0];
+  }
+</script>
+</body>
+</html>
