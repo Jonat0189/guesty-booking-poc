@@ -1,15 +1,23 @@
-// Shared token cache (persiste en mémoire entre les invocations tièdes)
-let cachedToken = null;
-let tokenExpiresAt = null;
+const { getStore } = require("@netlify/blobs");
+
+const TOKEN_KEY = "guesty_be_token";
 
 async function getBEToken() {
+  const store = getStore("guesty-tokens");
   const now = Date.now();
 
-  // Réutilise le token s'il est encore valide (avec 5min de marge)
-  if (cachedToken && tokenExpiresAt && now < tokenExpiresAt - 5 * 60 * 1000) {
-    return cachedToken;
+  // Essaie de récupérer le token depuis Netlify Blobs
+  try {
+    const cached = await store.get(TOKEN_KEY, { type: "json" });
+    if (cached && cached.token && cached.expiresAt && now < cached.expiresAt - 5 * 60 * 1000) {
+      console.log("Using cached BE token");
+      return cached.token;
+    }
+  } catch (err) {
+    console.log("No cached token found, fetching new one");
   }
 
+  // Fetch nouveau token
   const clientId = process.env.GUESTY_BE_CLIENT_ID;
   const clientSecret = process.env.GUESTY_BE_CLIENT_SECRET;
 
@@ -35,12 +43,18 @@ async function getBEToken() {
   }
 
   const data = await res.json();
+  const token = data.access_token;
+  const expiresAt = now + (data.expires_in || 86400) * 1000;
 
-  cachedToken = data.access_token;
-  // Token valide 24h selon la doc Guesty
-  tokenExpiresAt = now + (data.expires_in || 86400) * 1000;
+  // Sauvegarde dans Netlify Blobs
+  try {
+    await store.setJSON(TOKEN_KEY, { token, expiresAt });
+    console.log("BE token cached in Netlify Blobs");
+  } catch (err) {
+    console.error("Failed to cache token:", err.message);
+  }
 
-  return cachedToken;
+  return token;
 }
 
 module.exports = { getBEToken };
