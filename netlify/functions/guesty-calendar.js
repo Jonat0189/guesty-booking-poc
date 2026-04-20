@@ -50,23 +50,24 @@ exports.handler = async (event) => {
 
     const data = await res.json();
 
-    // Transforme la réponse brute en tableau de jours normalisés
-    const days = (data.days || data.data || []).map((day) => {
-      const available = !day.blocks && day.status !== "unavailable" && day.status !== "booked";
-      return {
-        date: day.date,
-        available,
-        price: day.price || day.basePrice || null,
-        currency: "CAD",
-        status: day.status || null,
-        minNights: day.minNights || null,
-      };
-    });
+    // La réponse est un tableau direct
+    const rawDays = Array.isArray(data) ? data : (data.days || data.data || []);
+
+    const days = rawDays.map((day) => ({
+      date: day.date,
+      available: day.status === "available",
+      price: day.price || day.basePrice || null,
+      currency: "CAD",
+      minNights: day.minNights || null,
+      maxNights: day.maxNights || null,
+      cta: day.cta || false,
+      ctd: day.ctd || false,
+    }));
 
     return {
       statusCode: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      body: JSON.stringify({ listingId, startDate, endDate, days, _raw: data }),
+      body: JSON.stringify({ listingId, startDate, endDate, days }),
     };
   } catch (err) {
     console.error("Calendar function error:", err);
