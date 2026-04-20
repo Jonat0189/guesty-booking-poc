@@ -30,7 +30,7 @@ exports.handler = async (event) => {
 
     // Booking Engine API - listing avec nightlyRates et allotment par date
     const fields = "_id nickname title nightlyRates allotment";
-    const url = `https://booking.guesty.com/api/listings/${listingId}?checkIn=${startDate}&checkOut=${endDate}&fields=${encodeURIComponent(fields)}`;
+    const url = `https://booking.guesty.com/api/listings/${listingId}?fields=${encodeURIComponent(fields)}`;
 
     const res = await fetch(url, {
       headers: {
