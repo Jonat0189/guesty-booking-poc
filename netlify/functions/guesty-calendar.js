@@ -29,7 +29,7 @@ exports.handler = async (event) => {
     const token = await getBEToken();
 
     // Endpoint calendrier dédié par listing
-    const url = `https://booking.guesty.com/api/listings/${listingId}/calendar?startDate=${startDate}&endDate=${endDate}`;
+    const url = `https://booking.guesty.com/api/listings/${listingId}/calendar?from=${startDate}&to=${endDate}`;
 
     const res = await fetch(url, {
       headers: {
