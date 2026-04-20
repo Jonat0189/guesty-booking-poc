@@ -28,9 +28,9 @@ exports.handler = async (event) => {
   try {
     const token = await getBEToken();
 
-    // Booking Engine API - listing avec nightlyRates et allotment par date
+    // Booking Engine API - liste filtrée par listingId avec nightlyRates et allotment
     const fields = "_id nickname title nightlyRates allotment";
-    const url = `https://booking.guesty.com/api/listings/${listingId}?fields=${encodeURIComponent(fields)}`;
+    const url = `https://booking.guesty.com/api/listings?checkIn=${startDate}&checkOut=${endDate}&fields=${encodeURIComponent(fields)}&limit=100`;
 
     const res = await fetch(url, {
       headers: {
@@ -51,10 +51,13 @@ exports.handler = async (event) => {
 
     const data = await res.json();
 
-    // nightlyRates = { "2025-06-01": 250, "2025-06-02": 275, ... }
-    // allotment    = { "2025-06-01": 1,   "2025-06-02": 0,   ... }
-    const nightlyRates = data.nightlyRates || {};
-    const allotment = data.allotment || {};
+    // La réponse est { results: [...] } - on cherche notre listing
+    const listing = (data.results || []).find(l => l._id === listingId) || data.results?.[0] || {};
+
+    // nightlyRates = { "2025-06-01": 250, ... }
+    // allotment    = { "2025-06-01": 1, ... }
+    const nightlyRates = listing.nightlyRates || {};
+    const allotment = listing.allotment || {};
 
     // Génère un tableau de jours entre startDate et endDate
     const days = [];
