@@ -837,12 +837,6 @@ function renderPriceBreakdown(money, couponCode) {
     html += `<div class="price-row"><span class="price-label">${f.title}</span><span class="price-amount">${fmt(f.amount)}</span></div>`;
   });
 
-  // Affiche le sous-total avant remise si coupon
-  if (couponCode && money.fareAccommodation !== money.fareAccommodationAdjusted) {
-    const discount = money.fareAccommodation - money.fareAccommodationAdjusted;
-    html += `<div class="price-row discount"><span class="price-label">Coupon ${couponCode}</span><span class="price-amount">−${fmt(discount)}</span></div>`;
-  }
-
   if (taxes.length) {
     const totalTax = taxes.reduce((s, t) => s + t.amount, 0);
     html += `<div class="price-row"><span class="price-label">Taxes</span><span class="price-amount">${fmt(totalTax)}</span></div>`;
