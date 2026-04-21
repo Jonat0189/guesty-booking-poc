@@ -1185,9 +1185,9 @@ function openModal() {
   const plan = allRatePlans.find(p => p.id === currentRatePlanId);
   const nights = nightsBetween(checkIn, checkOut);
   const policyLabels = {
-    strict: 'Non remboursable — aucun remboursement en cas d'annulation.',
-    moderate: 'Annulation flexible — remboursement complet si annulation 7 jours ou plus avant l'arrivée.',
-    flexible: 'Annulation flexible — remboursement complet si annulation 24h avant l'arrivée.',
+    strict: "Non remboursable — aucun remboursement en cas d'annulation.",
+    moderate: "Annulation flexible — remboursement complet si annulation 7 jours ou plus avant l'arrivée.",
+    flexible: "Annulation flexible — remboursement complet si annulation 24h avant l'arrivée.",
   };
 
   if (plan) {
