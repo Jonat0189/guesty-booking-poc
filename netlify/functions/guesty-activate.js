@@ -32,13 +32,15 @@ exports.handler = async (event) => {
       },
     });
     const quote = await quoteRes.json();
-    const ratePlanId = quote.rates?.ratePlans?.[0]?._id;
+
+    // La structure réelle : rates.ratePlans[0].ratePlan._id
+    const ratePlanId = quote.rates?.ratePlans?.[0]?.ratePlan?._id;
 
     if (!ratePlanId) {
       return {
         statusCode: 400,
         headers: CORS_HEADERS,
-        body: JSON.stringify({ error: "Aucun ratePlanId trouvé dans le quote", quote }),
+        body: JSON.stringify({ error: "Aucun ratePlanId trouvé", quote }),
       };
     }
 
