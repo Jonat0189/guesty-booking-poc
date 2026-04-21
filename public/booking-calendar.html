@@ -964,7 +964,7 @@ function renderRatePlans(plans) {
       <div class="rate-plan-card" id="rp-${plan.id}" onclick="selectRatePlan('${plan.id}')">
         ${badge}
         <div class="rp-name">${plan.name}</div>
-        <div class="rp-price">${fmt(plan.money.hostPayout)}</div>
+        <div class="rp-price">${Number(plan.money.hostPayout).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $</div>
         <div class="rp-policy">${policyLabels[policy] || policy}</div>
       </div>`;
   }).join('');
