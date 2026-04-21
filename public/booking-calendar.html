@@ -1208,6 +1208,14 @@ function openModal() {
 
 function closeModal() {
   document.getElementById('checkoutModal').classList.remove('visible');
+  const btn = document.getElementById('btnConfirm');
+  btn.disabled = false;
+  btn.textContent = 'Confirmer la réservation';
+  document.getElementById('checkoutError').textContent = '';
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('checkoutModal')) closeModal();
 }
 
 async function confirmReservation() {
@@ -1371,7 +1379,7 @@ function formatDateTime(s) {
 </script>
 
 <!-- CHECKOUT MODAL -->
-<div class="modal-overlay" id="checkoutModal">
+<div class="modal-overlay" id="checkoutModal" onclick="handleOverlayClick(event)">
   <div class="modal">
     <div class="modal-header">
       <h2 class="modal-title">Confirmer la réservation</h2>
