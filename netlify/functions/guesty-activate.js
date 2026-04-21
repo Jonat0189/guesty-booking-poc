@@ -24,6 +24,25 @@ exports.handler = async (event) => {
   try {
     const token = await getBEToken();
 
+    // Récupère le quote pour obtenir le ratePlanId
+    const quoteRes = await fetch(`https://booking.guesty.com/api/reservations/quotes/${quoteId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json; charset=utf-8",
+      },
+    });
+    const quote = await quoteRes.json();
+    const ratePlanId = quote.rates?.ratePlans?.[0]?._id;
+
+    if (!ratePlanId) {
+      return {
+        statusCode: 400,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: "Aucun ratePlanId trouvé dans le quote", quote }),
+      };
+    }
+
+    // Crée l'inquiry
     const res = await fetch(`https://booking.guesty.com/api/reservations/quotes/${quoteId}/inquiry`, {
       method: "POST",
       headers: {
@@ -32,6 +51,7 @@ exports.handler = async (event) => {
         Accept: "application/json; charset=utf-8",
       },
       body: JSON.stringify({
+        ratePlanId,
         guest: {
           firstName: "Test",
           lastName: "BESIDE",
@@ -46,7 +66,7 @@ exports.handler = async (event) => {
     return {
       statusCode: res.status,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ratePlanId, ...data }),
     };
   } catch (err) {
     return {
