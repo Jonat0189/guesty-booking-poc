@@ -432,6 +432,91 @@ body {
   font-style: italic;
 }
 
+/* COUPON */
+.coupon-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--parchment);
+}
+
+.coupon-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--sage);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+}
+
+.coupon-toggle:hover { color: var(--forest); }
+.coupon-toggle .toggle-arrow { font-size: 10px; transition: transform 0.2s; }
+.coupon-toggle.open .toggle-arrow { transform: rotate(180deg); }
+
+.coupon-form { display: none; margin-top: 10px; }
+.coupon-form.visible { display: block; }
+
+.coupon-input-row { display: flex; gap: 8px; }
+
+.coupon-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--parchment);
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--charcoal);
+  background: white;
+  outline: none;
+  transition: border-color 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.coupon-input:focus { border-color: var(--sage); }
+.coupon-input::placeholder { text-transform: none; letter-spacing: normal; color: var(--stone); }
+
+.btn-coupon {
+  padding: 9px 14px;
+  background: var(--parchment);
+  border: none;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--forest);
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.btn-coupon:hover { background: #ddd8cc; }
+.btn-coupon:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.coupon-feedback { margin-top: 8px; font-size: 12px; min-height: 16px; }
+.coupon-feedback.success { color: var(--sage); }
+.coupon-feedback.error { color: #b05030; }
+
+.coupon-applied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(74, 124, 89, 0.08);
+  border: 1px solid rgba(74, 124, 89, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 10px;
+}
+
+.coupon-applied-code { font-size: 13px; font-weight: 500; color: var(--sage); letter-spacing: 0.05em; }
+.btn-remove-coupon { background: none; border: none; cursor: pointer; color: var(--stone); font-size: 16px; padding: 0 2px; transition: color 0.15s; }
+.btn-remove-coupon:hover { color: #b05030; }
+.price-row.discount .price-amount { color: var(--sage); }
+
 @media (max-width: 840px) {
   .booking-layout { grid-template-columns: 1fr; }
   .months-grid { grid-template-columns: 1fr; }
@@ -511,6 +596,27 @@ body {
 
         <div id="priceBreakdown" class="price-breakdown" style="display:none"></div>
 
+        <!-- COUPON -->
+        <div class="coupon-section" id="couponSection" style="display:none">
+          <button class="coupon-toggle" id="couponToggle" onclick="toggleCoupon()">
+            <span>J'ai un code promo</span>
+            <span class="toggle-arrow">▾</span>
+          </button>
+          <div class="coupon-form" id="couponForm">
+            <div id="couponAppliedBadge" style="display:none" class="coupon-applied">
+              <span class="coupon-applied-code" id="couponAppliedCode"></span>
+              <button class="btn-remove-coupon" onclick="removeCoupon()" title="Retirer le coupon">×</button>
+            </div>
+            <div id="couponInputArea">
+              <div class="coupon-input-row">
+                <input type="text" class="coupon-input" id="couponInput" placeholder="Code promo" maxlength="32">
+                <button class="btn-coupon" id="btnApplyCoupon" onclick="applyCoupon()">Appliquer</button>
+              </div>
+              <p class="coupon-feedback" id="couponFeedback"></p>
+            </div>
+          </div>
+        </div>
+
         <button class="btn-reserve" id="btnReserve" disabled onclick="handleReserve()">
           Réserver
         </button>
@@ -532,6 +638,8 @@ let calendarData = {}; // { "YYYY-MM-DD": dayObj }
 let checkIn = null, checkOut = null;
 let guestsCount = 2;
 let currentQuoteId = null;
+let currentRatePlanId = null;
+let appliedCoupon = null;
 let quoteTimeout = null;
 
 // Init
@@ -697,16 +805,24 @@ async function fetchQuote() {
     }
 
     currentQuoteId = data.quoteId;
+    currentRatePlanId = data.ratePlans[0].id;
     renderPriceBreakdown(data.ratePlans[0].money);
     document.getElementById('btnReserve').disabled = false;
     document.getElementById('quoteIdNote').textContent = `Tarif garanti jusqu'au ${formatDateTime(data.expiresAt)}`;
+    document.getElementById('couponSection').style.display = 'block';
+    // Reset coupon si nouvelles dates
+    appliedCoupon = null;
+    document.getElementById('couponAppliedBadge').style.display = 'none';
+    document.getElementById('couponInputArea').style.display = 'block';
+    document.getElementById('couponFeedback').textContent = '';
+    document.getElementById('couponInput').value = '';
   } catch (e) {
     document.getElementById('quoteLoading').style.display = 'none';
     console.error('Quote error:', e);
   }
 }
 
-function renderPriceBreakdown(money) {
+function renderPriceBreakdown(money, couponCode) {
   const fmt = (v) => v != null ? `${Number(v).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $` : '—';
   const nights = nightsBetween(checkIn, checkOut);
 
@@ -720,6 +836,12 @@ function renderPriceBreakdown(money) {
   fees.forEach(f => {
     html += `<div class="price-row"><span class="price-label">${f.title}</span><span class="price-amount">${fmt(f.amount)}</span></div>`;
   });
+
+  // Affiche le sous-total avant remise si coupon
+  if (couponCode && money.fareAccommodation !== money.fareAccommodationAdjusted) {
+    const discount = money.fareAccommodation - money.fareAccommodationAdjusted;
+    html += `<div class="price-row discount"><span class="price-label">Coupon ${couponCode}</span><span class="price-amount">−${fmt(discount)}</span></div>`;
+  }
 
   if (taxes.length) {
     const totalTax = taxes.reduce((s, t) => s + t.amount, 0);
@@ -744,6 +866,61 @@ function changeGuests(delta) {
 function handleReserve() {
   if (!currentQuoteId) return;
   alert(`Quote ID: ${currentQuoteId}\n\nLa prochaine étape sera l'intégration Stripe pour le paiement.`);
+}
+
+function toggleCoupon() {
+  const toggle = document.getElementById('couponToggle');
+  const form = document.getElementById('couponForm');
+  toggle.classList.toggle('open');
+  form.classList.toggle('visible');
+}
+
+async function applyCoupon() {
+  const code = document.getElementById('couponInput').value.trim().toUpperCase();
+  if (!code || !currentQuoteId) return;
+
+  const btn = document.getElementById('btnApplyCoupon');
+  const feedback = document.getElementById('couponFeedback');
+  btn.disabled = true;
+  feedback.className = 'coupon-feedback';
+  feedback.textContent = 'Vérification...';
+
+  try {
+    const res = await fetch(`${BASE_URL}/guesty-coupon`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quoteId: currentQuoteId, ratePlanId: currentRatePlanId, couponCode: code }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      feedback.className = 'coupon-feedback error';
+      feedback.textContent = data.error || 'Code invalide ou expiré.';
+    } else {
+      appliedCoupon = code;
+      feedback.textContent = '';
+      document.getElementById('couponAppliedBadge').style.display = 'flex';
+      document.getElementById('couponAppliedCode').textContent = code;
+      document.getElementById('couponInputArea').style.display = 'none';
+      if (data.ratePlans?.[0]?.money) {
+        renderPriceBreakdown(data.ratePlans[0].money, code);
+      }
+    }
+  } catch (e) {
+    feedback.className = 'coupon-feedback error';
+    feedback.textContent = 'Erreur réseau, réessayez.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function removeCoupon() {
+  appliedCoupon = null;
+  document.getElementById('couponAppliedBadge').style.display = 'none';
+  document.getElementById('couponInputArea').style.display = 'block';
+  document.getElementById('couponInput').value = '';
+  document.getElementById('couponFeedback').textContent = '';
+  await fetchQuote();
 }
 
 async function prevMonths() {
