@@ -594,7 +594,7 @@ body {
 <body>
 
 <div class="page-header">
-  <p class="property-eyebrow">LAO Cantons-de-l'Est</p>
+  <p class="property-eyebrow">Habitat Lanaudière</p>
   <h1 class="property-title">L'<em>Atelier</em></h1>
 </div>
 
@@ -887,6 +887,13 @@ async function fetchQuote() {
     document.getElementById('couponFeedback').textContent = '';
     document.getElementById('couponInput').value = '';
     // Affiche les rate plans
+    console.log('ratePlans:', JSON.stringify(allRatePlans));
+    if (!allRatePlans.length) {
+      document.getElementById('priceBreakdown').innerHTML = '<p style="color:#b05030;font-size:13px;text-align:center;padding:12px 0">Aucun tarif disponible pour ces dates.</p>';
+      document.getElementById('priceBreakdown').style.display = 'block';
+      document.getElementById('ratePlansContainer').style.display = 'block';
+      return;
+    }
     document.getElementById('ratePlansContainer').style.display = 'block';
     renderRatePlans(allRatePlans);
     // Sélectionne le premier par défaut
