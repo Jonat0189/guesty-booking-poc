@@ -4,5 +4,8 @@
   "description": "Guesty Booking Engine API POC for BESIDE",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.0.0"
   }
 }
