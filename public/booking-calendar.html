@@ -432,6 +432,73 @@ body {
   font-style: italic;
 }
 
+/* RATE PLANS */
+.rate-plans {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.rate-plan-card {
+  border: 1.5px solid var(--parchment);
+  border-radius: 10px;
+  padding: 14px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  background: white;
+}
+
+.rate-plan-card:hover { border-color: var(--mist); background: #faf9f6; }
+
+.rate-plan-card.selected {
+  border-color: var(--forest);
+  background: rgba(26,46,30,0.03);
+}
+
+.rate-plan-card.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 11px;
+  color: var(--forest);
+  font-weight: 600;
+}
+
+.rp-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--forest);
+  margin-bottom: 4px;
+}
+
+.rp-price {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+
+.rp-policy {
+  font-size: 11px;
+  color: var(--stone);
+  line-height: 1.4;
+}
+
+.rp-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.rp-badge.flexible { background: rgba(74,124,89,0.1); color: var(--sage); }
+.rp-badge.standard { background: var(--parchment); color: var(--bark); }
+
 /* COUPON */
 .coupon-section {
   margin-top: 16px;
@@ -594,7 +661,10 @@ body {
           Calcul du tarif...
         </div>
 
-        <div id="priceBreakdown" class="price-breakdown" style="display:none"></div>
+        <div id="ratePlansContainer" style="display:none">
+          <div class="rate-plans" id="ratePlanCards"></div>
+          <div id="priceBreakdown" class="price-breakdown" style="display:none"></div>
+        </div>
 
         <!-- COUPON -->
         <div class="coupon-section" id="couponSection" style="display:none">
@@ -639,6 +709,7 @@ let checkIn = null, checkOut = null;
 let guestsCount = 2;
 let currentQuoteId = null;
 let currentRatePlanId = null;
+let allRatePlans = [];
 let appliedCoupon = null;
 let quoteTimeout = null;
 
@@ -773,6 +844,7 @@ function updateDatesDisplay() {
   document.getElementById('checkOutDisplay').textContent = formatDate(checkOut);
   document.getElementById('nightsBadge').textContent = `${nights} nuit${nights > 1 ? 's' : ''}`;
   document.getElementById('priceBreakdown').style.display = 'none';
+  document.getElementById('ratePlansContainer').style.display = 'none';
   document.getElementById('btnReserve').disabled = true;
   document.getElementById('quoteIdNote').textContent = '';
 }
@@ -805,9 +877,7 @@ async function fetchQuote() {
     }
 
     currentQuoteId = data.quoteId;
-    currentRatePlanId = data.ratePlans[0].id;
-    renderPriceBreakdown(data.ratePlans[0].money);
-    document.getElementById('btnReserve').disabled = false;
+    allRatePlans = data.ratePlans || [];
     document.getElementById('quoteIdNote').textContent = `Tarif garanti jusqu'au ${formatDateTime(data.expiresAt)}`;
     document.getElementById('couponSection').style.display = 'block';
     // Reset coupon si nouvelles dates
@@ -816,6 +886,11 @@ async function fetchQuote() {
     document.getElementById('couponInputArea').style.display = 'block';
     document.getElementById('couponFeedback').textContent = '';
     document.getElementById('couponInput').value = '';
+    // Affiche les rate plans
+    document.getElementById('ratePlansContainer').style.display = 'block';
+    renderRatePlans(allRatePlans);
+    // Sélectionne le premier par défaut
+    selectRatePlan(allRatePlans[0].id);
   } catch (e) {
     document.getElementById('quoteLoading').style.display = 'none';
     console.error('Quote error:', e);
@@ -855,6 +930,51 @@ function changeGuests(delta) {
   guestsCount = Math.max(1, Math.min(10, guestsCount + delta));
   document.getElementById('guestsDisplay').textContent = guestsCount;
   if (checkIn && checkOut) scheduleQuote();
+}
+
+function renderRatePlans(plans) {
+  const container = document.getElementById('ratePlanCards');
+  const policyLabels = {
+    strict: 'Non remboursable',
+    moderate: 'Annulable 7 jours avant',
+    flexible: 'Annulable 24h avant',
+    no_refund: 'Non remboursable',
+  };
+  const policyDesc = {
+    strict: 'Aucun remboursement',
+    moderate: 'Remboursement complet si annulation 7+ jours avant',
+    flexible: 'Remboursement complet si annulation 24h+ avant',
+    no_refund: 'Aucun remboursement',
+  };
+
+  container.innerHTML = plans.map(plan => {
+    const isFlexible = plan.priceAdjustment?.amount > 0;
+    const badge = isFlexible
+      ? `<span class="rp-badge flexible">Annulation flexible</span>`
+      : `<span class="rp-badge standard">Meilleur prix</span>`;
+    const policy = plan.cancellationPolicy || 'strict';
+    return `
+      <div class="rate-plan-card" id="rp-${plan.id}" onclick="selectRatePlan('${plan.id}')">
+        ${badge}
+        <div class="rp-name">${plan.name}</div>
+        <div class="rp-price">${fmt(plan.money.hostPayout)}</div>
+        <div class="rp-policy">${policyLabels[policy] || policy}</div>
+      </div>`;
+  }).join('');
+}
+
+function selectRatePlan(planId) {
+  currentRatePlanId = planId;
+  // Update card styles
+  document.querySelectorAll('.rate-plan-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById(`rp-${planId}`);
+  if (card) card.classList.add('selected');
+  // Show breakdown for selected plan
+  const plan = allRatePlans.find(p => p.id === planId);
+  if (plan) {
+    renderPriceBreakdown(plan.money);
+    document.getElementById('btnReserve').disabled = false;
+  }
 }
 
 function handleReserve() {
