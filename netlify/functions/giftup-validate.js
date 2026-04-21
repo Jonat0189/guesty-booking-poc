@@ -37,8 +37,6 @@ exports.handler = async (event) => {
     });
 
     const data = await res.json();
-    console.log('GiftUp response:', JSON.stringify(data));
-
     if (!res.ok) {
       return {
         statusCode: 400,
@@ -47,7 +45,7 @@ exports.handler = async (event) => {
       };
     }
 
-    if (data.balance <= 0) {
+    if (data.remainingValue <= 0) {
       return {
         statusCode: 400,
         headers: CORS_HEADERS,
@@ -60,9 +58,10 @@ exports.handler = async (event) => {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       body: JSON.stringify({
         code: data.code || code,
-        balance: data.balance,
-        currency: data.currency || "CAD",
+        balance: data.remainingValue,
+        currency: "CAD",
         isValid: true,
+        recipientName: data.recipientName || null,
       }),
     };
   } catch (err) {
