@@ -66,9 +66,9 @@ exports.handler = async (event) => {
 
     const data = await res.json();
 
-    // Extrait le rate plan par défaut (premier disponible)
+    // Structure réelle : rates.ratePlans[0].ratePlan
     const ratePlans = data.rates?.ratePlans || [];
-    const defaultPlan = ratePlans[0] || null;
+    const defaultPlan = ratePlans[0]?.ratePlan || null;
 
     const summary = {
       quoteId: data._id,
@@ -77,24 +77,26 @@ exports.handler = async (event) => {
       checkIn,
       checkOut,
       guestsCount,
-      ratePlans: ratePlans.map((plan) => ({
-        id: plan._id,
-        name: plan.name,
-        type: plan.type,
-        cancellationPolicy: plan.cancellationPolicy,
-        money: {
-          fareAccommodation: plan.money?.fareAccommodation,
-          fareCleaning: plan.money?.fareCleaning,
-          totalFees: plan.money?.totalFees,
-          totalTaxes: plan.money?.totalTaxes,
-          subTotalPrice: plan.money?.subTotalPrice,
-          hostPayout: plan.money?.hostPayout,
-          currency: plan.money?.currency || "CAD",
-          invoiceItems: plan.money?.invoiceItems || [],
-        },
-        priceAdjustment: plan.priceAdjustment || null,
-      })),
-      // Rate plan recommandé (premier)
+      ratePlans: ratePlans.map((plan) => {
+        const rp = plan.ratePlan || plan;
+        return {
+          id: rp._id,
+          name: rp.name,
+          type: rp.type,
+          cancellationPolicy: rp.cancellationPolicy,
+          money: {
+            fareAccommodation: rp.money?.fareAccommodation,
+            fareCleaning: rp.money?.fareCleaning,
+            totalFees: rp.money?.totalFees,
+            totalTaxes: rp.money?.totalTaxes,
+            subTotalPrice: rp.money?.subTotalPrice,
+            hostPayout: rp.money?.hostPayout,
+            currency: rp.money?.currency || "CAD",
+            invoiceItems: rp.money?.invoiceItems || [],
+          },
+          priceAdjustment: rp.priceAdjustment || null,
+        };
+      }),
       recommended: defaultPlan
         ? {
             ratePlanId: defaultPlan._id,
