@@ -37,6 +37,7 @@ exports.handler = async (event) => {
     });
 
     const data = await res.json();
+    console.log('GiftUp response:', JSON.stringify(data));
 
     if (!res.ok) {
       return {
