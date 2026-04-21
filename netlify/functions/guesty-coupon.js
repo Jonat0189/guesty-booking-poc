@@ -47,13 +47,17 @@ exports.handler = async (event) => {
     const data = await res.json();
 
     if (!res.ok) {
-      // Guesty retourne 400 si le coupon est invalide
+      const errText = await res.text();
+      console.error("Coupon error:", res.status, errText);
       return {
         statusCode: 400,
         headers: CORS_HEADERS,
-        body: JSON.stringify({ error: "Code invalide ou expiré." }),
+        body: JSON.stringify({ error: "Code invalide ou expiré.", detail: errText }),
       };
     }
+
+    // Log raw response pour debug
+    console.log("Coupon raw response:", JSON.stringify(data).substring(0, 500));
 
     // Retourne le quote mis à jour avec le bon chemin ratePlan
     const ratePlans = data.rates?.ratePlans || [];
