@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BESIDE — Réservation Le Pionnier</title>
+<script src="https://js.stripe.com/v3/"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -589,6 +590,167 @@ body {
   .months-grid { grid-template-columns: 1fr; }
   .quote-panel { position: static; }
 }
+
+/* CHECKOUT MODAL */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,46,30,0.5);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-overlay.visible { display: flex; }
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.18);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.modal-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  color: var(--forest);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  color: var(--stone);
+  padding: 0 4px;
+  transition: color 0.15s;
+}
+
+.modal-close:hover { color: var(--charcoal); }
+
+.modal-summary {
+  background: var(--cream);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+
+.modal-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  color: var(--bark);
+}
+
+.modal-summary-row.total {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--forest);
+  border-top: 1px solid var(--parchment);
+  margin-top: 6px;
+  padding-top: 8px;
+}
+
+.form-section-title {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--stone);
+  margin-bottom: 12px;
+  margin-top: 20px;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-label {
+  display: block;
+  font-size: 12px;
+  color: var(--stone);
+  margin-bottom: 5px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--parchment);
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--charcoal);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-input:focus { border-color: var(--sage); }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.stripe-element {
+  padding: 10px 12px;
+  border: 1px solid var(--parchment);
+  border-radius: 8px;
+  background: white;
+  transition: border-color 0.15s;
+}
+
+.stripe-element.focused { border-color: var(--sage); }
+
+.policy-note {
+  font-size: 12px;
+  color: var(--stone);
+  margin: 16px 0;
+  padding: 12px;
+  background: rgba(74,124,89,0.06);
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.btn-confirm {
+  width: 100%;
+  padding: 14px;
+  background: var(--forest);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 8px;
+}
+
+.btn-confirm:hover { background: var(--moss); }
+.btn-confirm:disabled { background: var(--mist); cursor: not-allowed; }
+
+.checkout-error {
+  color: #b05030;
+  font-size: 13px;
+  margin-top: 10px;
+  text-align: center;
+  min-height: 20px;
+}
+
+.secure-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--stone);
+  margin-top: 10px;
+}
 </style>
 </head>
 <body>
@@ -984,9 +1146,142 @@ function selectRatePlan(planId) {
   }
 }
 
+// Stripe setup
+const STRIPE_PK = 'pk_live_B8nMGXqMZWzhrWLGfDCCOsYa00ec0helwd';
+let stripe = null;
+let cardNumber = null, cardExpiry = null, cardCvc = null;
+
+function initStripe() {
+  if (stripe) return;
+  stripe = Stripe(STRIPE_PK);
+  const elements = stripe.elements();
+  const style = {
+    base: {
+      fontFamily: "'DM Sans', sans-serif",
+      fontSize: '14px',
+      color: '#2a2520',
+      '::placeholder': { color: '#9e9488' },
+    }
+  };
+  cardNumber = elements.create('cardNumber', { style });
+  cardExpiry = elements.create('cardExpiry', { style });
+  cardCvc = elements.create('cardCvc', { style });
+  cardNumber.mount('#cardNumber');
+  cardExpiry.mount('#cardExpiry');
+  cardCvc.mount('#cardCvc');
+  [cardNumber, cardExpiry, cardCvc].forEach(el => {
+    el.on('focus', () => el._el?.closest('.stripe-element')?.classList.add('focused'));
+    el.on('blur', () => el._el?.closest('.stripe-element')?.classList.remove('focused'));
+  });
+}
+
 function handleReserve() {
-  if (!currentQuoteId) return;
-  alert(`Quote ID: ${currentQuoteId}\n\nLa prochaine étape sera l'intégration Stripe pour le paiement.`);
+  if (!currentQuoteId || !currentRatePlanId) return;
+  openModal();
+}
+
+function openModal() {
+  // Remplis le résumé
+  const plan = allRatePlans.find(p => p.id === currentRatePlanId);
+  const nights = nightsBetween(checkIn, checkOut);
+  const policyLabels = {
+    strict: 'Non remboursable — aucun remboursement en cas d'annulation.',
+    moderate: 'Annulation flexible — remboursement complet si annulation 7 jours ou plus avant l'arrivée.',
+    flexible: 'Annulation flexible — remboursement complet si annulation 24h avant l'arrivée.',
+  };
+
+  if (plan) {
+    const fmt = (v) => `${Number(v).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
+    document.getElementById('modalSummary').innerHTML = `
+      <div class="modal-summary-row"><span>Séjour</span><span>${formatDate(checkIn)} → ${formatDate(checkOut)}</span></div>
+      <div class="modal-summary-row"><span>Plan</span><span>${plan.name}</span></div>
+      <div class="modal-summary-row"><span>Nuits</span><span>${nights}</span></div>
+      <div class="modal-summary-row total"><span>Total</span><span>${fmt(plan.money.hostPayout)}</span></div>
+    `;
+    document.getElementById('policyNote').textContent = policyLabels[plan.cancellationPolicy] || '';
+  }
+
+  document.getElementById('checkoutModal').classList.add('visible');
+  document.getElementById('checkoutError').textContent = '';
+  setTimeout(initStripe, 100);
+}
+
+function closeModal() {
+  document.getElementById('checkoutModal').classList.remove('visible');
+}
+
+async function confirmReservation() {
+  const firstName = document.getElementById('guestFirstName').value.trim();
+  const lastName = document.getElementById('guestLastName').value.trim();
+  const email = document.getElementById('guestEmail').value.trim();
+  const phone = document.getElementById('guestPhone').value.trim();
+  const errorEl = document.getElementById('checkoutError');
+  const btn = document.getElementById('btnConfirm');
+
+  if (!firstName || !lastName || !email) {
+    errorEl.textContent = 'Veuillez remplir tous les champs obligatoires.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Traitement en cours...';
+  errorEl.textContent = '';
+
+  try {
+    // 1. Tokeniser la carte avec Stripe
+    const { paymentMethod, error } = await stripe.createPaymentMethod({
+      type: 'card',
+      card: cardNumber,
+      billing_details: { name: `${firstName} ${lastName}`, email },
+    });
+
+    if (error) {
+      errorEl.textContent = error.message;
+      btn.disabled = false;
+      btn.textContent = 'Confirmer la réservation';
+      return;
+    }
+
+    // 2. Créer l'inquiry via notre fonction Netlify
+    const res = await fetch(`${BASE_URL}/guesty-reservation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        quoteId: currentQuoteId,
+        ratePlanId: currentRatePlanId,
+        ccToken: paymentMethod.id,
+        guest: { firstName, lastName, email, phone },
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      errorEl.textContent = data.error || 'Une erreur est survenue. Veuillez réessayer.';
+      btn.disabled = false;
+      btn.textContent = 'Confirmer la réservation';
+      return;
+    }
+
+    // Succès
+    closeModal();
+    showConfirmation(data);
+  } catch (e) {
+    errorEl.textContent = 'Erreur réseau. Veuillez réessayer.';
+    btn.disabled = false;
+    btn.textContent = 'Confirmer la réservation';
+  }
+}
+
+function showConfirmation(data) {
+  document.querySelector('.booking-layout').innerHTML = `
+    <div style="grid-column:1/-1;text-align:center;padding:60px 20px">
+      <div style="font-size:48px;margin-bottom:20px">🌲</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:28px;color:var(--forest);margin-bottom:12px">Réservation reçue!</h2>
+      <p style="color:var(--stone);margin-bottom:8px">Numéro de confirmation : <strong>${data.confirmationCode}</strong></p>
+      <p style="color:var(--stone);font-size:14px">Votre demande est en attente de confirmation. Vous recevrez un courriel sous peu.</p>
+    </div>
+  `;
 }
 
 function toggleCoupon() {
@@ -1074,5 +1369,62 @@ function formatDateTime(s) {
   return new Date(s).toLocaleString('fr-CA', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 }
 </script>
+
+<!-- CHECKOUT MODAL -->
+<div class="modal-overlay" id="checkoutModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Confirmer la réservation</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+
+    <div class="modal-summary" id="modalSummary"></div>
+
+    <div class="form-section-title">Vos informations</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Prénom</label>
+        <input class="form-input" id="guestFirstName" type="text" placeholder="Jean">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nom</label>
+        <input class="form-input" id="guestLastName" type="text" placeholder="Tremblay">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Courriel</label>
+      <input class="form-input" id="guestEmail" type="email" placeholder="jean@exemple.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Téléphone</label>
+      <input class="form-input" id="guestPhone" type="tel" placeholder="+1 514 000 0000">
+    </div>
+
+    <div class="form-section-title">Paiement</div>
+    <div class="form-group">
+      <label class="form-label">Numéro de carte</label>
+      <div id="cardNumber" class="stripe-element"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Expiration</label>
+        <div id="cardExpiry" class="stripe-element"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">CVC</label>
+        <div id="cardCvc" class="stripe-element"></div>
+      </div>
+    </div>
+
+    <div class="policy-note" id="policyNote"></div>
+
+    <button class="btn-confirm" id="btnConfirm" onclick="confirmReservation()">
+      Confirmer la réservation
+    </button>
+    <p class="checkout-error" id="checkoutError"></p>
+    <p class="secure-note">🔒 Paiement sécurisé via Stripe. Votre carte ne sera pas débitée maintenant.</p>
+  </div>
+</div>
+
 </body>
 </html>
