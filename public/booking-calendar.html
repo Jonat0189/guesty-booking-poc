@@ -769,6 +769,58 @@ body {
   color: var(--stone);
   margin-top: 10px;
 }
+
+.giftup-section {
+  margin-bottom: 4px;
+}
+
+.giftup-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.giftup-applied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(74,124,89,0.08);
+  border: 1px solid rgba(74,124,89,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 4px;
+}
+
+.giftup-applied-info { font-size: 13px; color: var(--sage); }
+.giftup-applied-code { font-weight: 600; }
+.giftup-applied-balance { font-size: 12px; margin-top: 2px; }
+
+.btn-remove-gift {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--stone);
+  font-size: 18px;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+.btn-remove-gift:hover { color: #b05030; }
+
+.giftup-feedback { margin-top: 6px; font-size: 12px; min-height: 16px; }
+.giftup-feedback.success { color: var(--sage); }
+.giftup-feedback.error { color: #b05030; }
+
+.remaining-amount {
+  background: var(--cream);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--bark);
+  display: flex;
+  justify-content: space-between;
+}
+
+.remaining-amount strong { color: var(--forest); font-size: 15px; }
 </style>
 </head>
 <body>
@@ -891,6 +943,7 @@ let currentQuoteId = null;
 let currentRatePlanId = null;
 let allRatePlans = [];
 let appliedCoupon = null;
+let giftCard = null; // { code, balance, currency }
 let quoteTimeout = null;
 
 // Init
@@ -1158,6 +1211,68 @@ function selectRatePlan(planId) {
   }
 }
 
+// GiftUp
+async function applyGiftCard() {
+  const code = document.getElementById('giftupInput').value.trim().toUpperCase();
+  if (!code) return;
+
+  const btn = document.getElementById('btnApplyGift');
+  const feedback = document.getElementById('giftupFeedback');
+  btn.disabled = true;
+  feedback.className = 'giftup-feedback';
+  feedback.textContent = 'Vérification...';
+
+  try {
+    const res = await fetch(`${BASE_URL}/giftup-validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      feedback.className = 'giftup-feedback error';
+      feedback.textContent = data.error || 'Code invalide.';
+    } else {
+      giftCard = { code: data.code || code, balance: data.balance, currency: data.currency };
+      feedback.textContent = '';
+      document.getElementById('giftupApplied').style.display = 'flex';
+      document.getElementById('giftupCode').textContent = giftCard.code;
+      document.getElementById('giftupBalanceDisplay').textContent = `Solde disponible : ${fmtPrice(giftCard.balance)}`;
+      document.getElementById('giftupInputArea').style.display = 'none';
+      updateRemainingAmount();
+    }
+  } catch (e) {
+    feedback.className = 'giftup-feedback error';
+    feedback.textContent = 'Erreur réseau.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function removeGiftCard() {
+  giftCard = null;
+  document.getElementById('giftupApplied').style.display = 'none';
+  document.getElementById('giftupInputArea').style.display = 'block';
+  document.getElementById('giftupInput').value = '';
+  document.getElementById('giftupFeedback').textContent = '';
+  document.getElementById('remainingAmount').style.display = 'none';
+}
+
+function updateRemainingAmount() {
+  if (!giftCard) return;
+  const plan = allRatePlans.find(p => p.id === currentRatePlanId);
+  if (!plan) return;
+  const total = plan.money.hostPayout;
+  const remaining = Math.max(0, total - giftCard.balance);
+  document.getElementById('remainingAmount').style.display = 'flex';
+  document.getElementById('remainingAmountValue').textContent = fmtPrice(remaining);
+}
+
+function fmtPrice(v) {
+  return `${Number(v).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+}
+
 // Stripe setup
 const STRIPE_PK = 'pk_live_B8nMGXqMZWzhrWLGfDCCOsYa00ec0helwd';
 let stripe = null;
@@ -1228,6 +1343,13 @@ function openModal() {
 
   document.getElementById('checkoutModal').classList.add('visible');
   document.getElementById('checkoutError').textContent = '';
+  // Reset gift card
+  giftCard = null;
+  document.getElementById('giftupApplied').style.display = 'none';
+  document.getElementById('giftupInputArea').style.display = 'block';
+  document.getElementById('giftupInput').value = '';
+  document.getElementById('giftupFeedback').textContent = '';
+  document.getElementById('remainingAmount').style.display = 'none';
   setTimeout(initStripe, 100);
 }
 
@@ -1284,6 +1406,7 @@ async function confirmReservation() {
         ratePlanId: currentRatePlanId,
         ccToken: paymentMethod.id,
         guest: { firstName, lastName, email, phone },
+        giftCard: giftCard ? { code: giftCard.code, balance: giftCard.balance } : null,
       }),
     });
 
@@ -1431,6 +1554,29 @@ function formatDateTime(s) {
     <div class="form-group">
       <label class="form-label">Téléphone</label>
       <input class="form-input" id="guestPhone" type="tel" placeholder="+1 514 000 0000">
+    </div>
+
+    <div class="form-section-title">Carte cadeau (optionnel)</div>
+    <div class="giftup-section">
+      <div id="giftupApplied" style="display:none" class="giftup-applied">
+        <div class="giftup-applied-info">
+          <div class="giftup-applied-code" id="giftupCode"></div>
+          <div class="giftup-applied-balance" id="giftupBalanceDisplay"></div>
+        </div>
+        <button class="btn-remove-gift" onclick="removeGiftCard()">×</button>
+      </div>
+      <div id="giftupInputArea">
+        <div class="giftup-input-row">
+          <input type="text" class="form-input" id="giftupInput" placeholder="Code carte cadeau" style="text-transform:uppercase;letter-spacing:0.05em">
+          <button class="btn-coupon" id="btnApplyGift" onclick="applyGiftCard()">Appliquer</button>
+        </div>
+        <p class="giftup-feedback" id="giftupFeedback"></p>
+      </div>
+    </div>
+
+    <div id="remainingAmount" style="display:none" class="remaining-amount">
+      <span>Solde à payer par carte</span>
+      <strong id="remainingAmountValue"></strong>
     </div>
 
     <div class="form-section-title">Paiement</div>
