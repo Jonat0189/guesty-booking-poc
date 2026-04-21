@@ -715,10 +715,26 @@ body {
   font-size: 12px;
   color: var(--stone);
   margin: 16px 0;
-  padding: 12px;
+  padding: 12px 16px;
   background: rgba(74,124,89,0.06);
   border-radius: 8px;
   line-height: 1.5;
+}
+
+.policy-note .policy-title {
+  font-weight: 600;
+  color: var(--bark);
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.policy-note ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.policy-note ul li {
+  margin-bottom: 4px;
 }
 
 .btn-confirm {
@@ -1181,9 +1197,22 @@ function openModal() {
   const plan = allRatePlans.find(p => p.id === currentRatePlanId);
   const nights = nightsBetween(checkIn, checkOut);
   const policyLabels = {
-    strict: "Politique d'annulation standard — frais d'annulation de 125 $ en tout temps. Annulation 30 jours et plus avant l'arrivée : remboursement complet moins 125 $. Annulation 15 à 30 jours avant : remboursement de 50 % du total. Annulation à moins de 15 jours : remboursement des frais de ménage seulement.",
-    moderate: "Politique d'annulation flexible — frais d'annulation de 125 $ en tout temps. Annulation 7 jours et plus avant l'arrivée : remboursement complet moins 125 $. Annulation à moins de 7 jours : remboursement des frais de ménage seulement.",
-    flexible: "Politique d'annulation flexible — frais d'annulation de 125 $ en tout temps. Annulation 7 jours et plus avant l'arrivée : remboursement complet moins 125 $. Annulation à moins de 7 jours : remboursement des frais de ménage seulement.",
+    strict: `<div class="policy-title">Politique d'annulation standard</div><ul>
+      <li>Frais d'annulation de 125 $ en tout temps</li>
+      <li><strong>30 jours et plus avant l'arrivée</strong> — remboursement complet moins 125 $</li>
+      <li><strong>15 à 30 jours avant</strong> — remboursement de 50 % du total</li>
+      <li><strong>Moins de 15 jours</strong> — remboursement des frais de ménage seulement</li>
+    </ul>`,
+    moderate: `<div class="policy-title">Politique d'annulation flexible</div><ul>
+      <li>Frais d'annulation de 125 $ en tout temps</li>
+      <li><strong>7 jours et plus avant l'arrivée</strong> — remboursement complet moins 125 $</li>
+      <li><strong>Moins de 7 jours</strong> — remboursement des frais de ménage seulement</li>
+    </ul>`,
+    flexible: `<div class="policy-title">Politique d'annulation flexible</div><ul>
+      <li>Frais d'annulation de 125 $ en tout temps</li>
+      <li><strong>7 jours et plus avant l'arrivée</strong> — remboursement complet moins 125 $</li>
+      <li><strong>Moins de 7 jours</strong> — remboursement des frais de ménage seulement</li>
+    </ul>`,
   };
 
   if (plan) {
@@ -1194,7 +1223,7 @@ function openModal() {
       <div class="modal-summary-row"><span>Nuits</span><span>${nights}</span></div>
       <div class="modal-summary-row total"><span>Total</span><span>${fmt(plan.money.hostPayout)}</span></div>
     `;
-    document.getElementById('policyNote').textContent = policyLabels[plan.cancellationPolicy] || '';
+    document.getElementById('policyNote').innerHTML = policyLabels[plan.cancellationPolicy] || '';
   }
 
   document.getElementById('checkoutModal').classList.add('visible');
