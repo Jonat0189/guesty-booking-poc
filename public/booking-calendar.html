@@ -1106,16 +1106,10 @@ function changeGuests(delta) {
 function renderRatePlans(plans) {
   const container = document.getElementById('ratePlanCards');
   const policyLabels = {
-    strict: 'Non remboursable',
-    moderate: 'Annulable 7 jours avant',
-    flexible: 'Annulable 24h avant',
+    strict: 'Annulation standard',
+    moderate: 'Annulation flexible',
+    flexible: 'Annulation flexible',
     no_refund: 'Non remboursable',
-  };
-  const policyDesc = {
-    strict: 'Aucun remboursement',
-    moderate: 'Remboursement complet si annulation 7+ jours avant',
-    flexible: 'Remboursement complet si annulation 24h+ avant',
-    no_refund: 'Aucun remboursement',
   };
 
   container.innerHTML = plans.map(plan => {
@@ -1187,9 +1181,9 @@ function openModal() {
   const plan = allRatePlans.find(p => p.id === currentRatePlanId);
   const nights = nightsBetween(checkIn, checkOut);
   const policyLabels = {
-    strict: "Non remboursable — aucun remboursement en cas d'annulation.",
-    moderate: "Annulation flexible — remboursement complet si annulation 7 jours ou plus avant l'arrivée.",
-    flexible: "Annulation flexible — remboursement complet si annulation 24h avant l'arrivée.",
+    strict: "Politique d'annulation standard — frais d'annulation de 125 $ en tout temps. Annulation 30 jours et plus avant l'arrivée : remboursement complet moins 125 $. Annulation 15 à 30 jours avant : remboursement de 50 % du total. Annulation à moins de 15 jours : remboursement des frais de ménage seulement.",
+    moderate: "Politique d'annulation flexible — frais d'annulation de 125 $ en tout temps. Annulation 7 jours et plus avant l'arrivée : remboursement complet moins 125 $. Annulation à moins de 7 jours : remboursement des frais de ménage seulement.",
+    flexible: "Politique d'annulation flexible — frais d'annulation de 125 $ en tout temps. Annulation 7 jours et plus avant l'arrivée : remboursement complet moins 125 $. Annulation à moins de 7 jours : remboursement des frais de ménage seulement.",
   };
 
   if (plan) {
