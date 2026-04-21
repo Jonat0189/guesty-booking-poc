@@ -24,7 +24,7 @@ exports.handler = async (event) => {
   try {
     const token = await getBEToken();
 
-    const res = await fetch(`https://booking.guesty.com/api/upsell?quoteId=${quoteId}`, {
+    const res = await fetch(`https://booking.guesty.com/api/reservations/quotes/${quoteId}/upsell`, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/json; charset=utf-8",
