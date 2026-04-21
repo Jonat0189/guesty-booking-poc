@@ -18,20 +18,21 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: "Invalid JSON" }) };
   }
 
-  const { quoteId, ratePlanId, couponCode } = body;
+  const { listingId, checkIn, checkOut, guestsCount, couponCode } = body;
 
-  if (!quoteId || !ratePlanId || !couponCode) {
+  if (!listingId || !checkIn || !checkOut || !couponCode) {
     return {
       statusCode: 400,
       headers: CORS_HEADERS,
-      body: JSON.stringify({ error: "quoteId, ratePlanId et couponCode sont requis" }),
+      body: JSON.stringify({ error: "listingId, checkIn, checkOut et couponCode sont requis" }),
     };
   }
 
   try {
     const token = await getBEToken();
 
-    const res = await fetch(`https://booking.guesty.com/api/reservations/quotes/${quoteId}/coupons`, {
+    // Crée un nouveau quote avec le coupon inclus
+    const res = await fetch("https://booking.guesty.com/api/reservations/quotes", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -39,33 +40,44 @@ exports.handler = async (event) => {
         Accept: "application/json; charset=utf-8",
       },
       body: JSON.stringify({
-        ratePlanId,
-        coupons: [couponCode],
+        checkInDateLocalized: checkIn,
+        checkOutDateLocalized: checkOut,
+        listingId,
+        guestsCount: guestsCount || 2,
+        coupons: couponCode,
       }),
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      const errText = await res.text();
-      console.error("Coupon error:", res.status, errText);
       return {
         statusCode: 400,
         headers: CORS_HEADERS,
-        body: JSON.stringify({ error: "Code invalide ou expiré.", detail: errText }),
+        body: JSON.stringify({ error: "Code invalide ou expiré." }),
       };
     }
 
-    // Log raw response pour debug
-    console.log("Coupon raw response:", JSON.stringify(data).substring(0, 500));
+    // Vérifie que le coupon a été appliqué
+    const coupons = data.coupons || [];
+    const appliedCoupon = coupons.find(c => c.code?.toUpperCase() === couponCode.toUpperCase());
+    if (!appliedCoupon && coupons.length === 0) {
+      return {
+        statusCode: 400,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: "Code invalide ou non applicable à ces dates." }),
+      };
+    }
 
-    // Retourne le quote mis à jour avec le bon chemin ratePlan
+    // Retourne le quote avec le bon chemin ratePlan
     const ratePlans = data.rates?.ratePlans || [];
     return {
       statusCode: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       body: JSON.stringify({
         quoteId: data._id,
+        expiresAt: data.expiresAt,
+        couponApplied: appliedCoupon || coupons[0] || null,
         ratePlans: ratePlans.map((plan) => {
           const rp = plan.ratePlan || plan;
           return {

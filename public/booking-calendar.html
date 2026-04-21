@@ -889,7 +889,7 @@ async function applyCoupon() {
     const res = await fetch(`${BASE_URL}/guesty-coupon`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quoteId: currentQuoteId, ratePlanId: currentRatePlanId, couponCode: code }),
+      body: JSON.stringify({ quoteId: currentQuoteId, ratePlanId: currentRatePlanId, couponCode: code, listingId: LISTING_ID, checkIn, checkOut, guestsCount }),
     });
     const data = await res.json();
 
@@ -898,6 +898,12 @@ async function applyCoupon() {
       feedback.textContent = data.error || 'Code invalide ou expiré.';
     } else {
       appliedCoupon = code;
+      // Met à jour le quoteId avec le nouveau quote qui inclut le coupon
+      if (data.quoteId) {
+        currentQuoteId = data.quoteId;
+        currentRatePlanId = data.ratePlans?.[0]?.id || currentRatePlanId;
+        document.getElementById('quoteIdNote').textContent = `Tarif garanti jusqu'au ${formatDateTime(data.expiresAt)}`;
+      }
       feedback.textContent = '';
       document.getElementById('couponAppliedBadge').style.display = 'flex';
       document.getElementById('couponAppliedCode').textContent = code;
