@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BESIDE — Réservation Le Pionnier</title>
 <script src="https://js.stripe.com/v3/"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCthmTJQQsSt07SRL5vRAZ7STRP6GjS_d4&libraries=places"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -864,6 +865,47 @@ body {
   min-height: 20px;
 }
 
+.address-group {
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.address-autocomplete-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--parchment);
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--charcoal);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.address-autocomplete-input:focus { border-color: var(--sage); }
+
+.pac-container {
+  border-radius: 8px;
+  border: 1px solid var(--parchment);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.pac-item { padding: 8px 12px; cursor: pointer; }
+.pac-item:hover { background: var(--cream); }
+.pac-item-query { font-weight: 500; color: var(--forest); }
+
+.address-fields {
+  display: none;
+  gap: 10px;
+  flex-direction: column;
+  margin-top: 8px;
+}
+
+.address-fields.visible { display: flex; }
+
 .secure-note {
   text-align: center;
   font-size: 11px;
@@ -1516,6 +1558,42 @@ const STRIPE_PK = 'pk_live_B8nMGXqMZWzhrWLGfDCCOsYa00ec0helwd';
 let stripe = null;
 let cardNumber = null, cardExpiry = null, cardCvc = null;
 
+function initAddressAutocomplete() {
+  if (!window.google) return;
+  const input = document.getElementById('addressSearch');
+  const autocomplete = new google.maps.places.Autocomplete(input, {
+    types: ['address'],
+    componentRestrictions: { country: ['ca', 'us'] },
+  });
+
+  autocomplete.addListener('place_changed', () => {
+    const place = autocomplete.getPlace();
+    if (!place.address_components) return;
+
+    // Reset fields
+    document.getElementById('addressStreet').value = '';
+    document.getElementById('addressCity').value = '';
+    document.getElementById('addressState').value = '';
+    document.getElementById('addressZip').value = '';
+    document.getElementById('addressCountry').value = '';
+
+    let streetNumber = '', streetName = '';
+
+    place.address_components.forEach(component => {
+      const types = component.types;
+      if (types.includes('street_number')) streetNumber = component.long_name;
+      if (types.includes('route')) streetName = component.long_name;
+      if (types.includes('locality')) document.getElementById('addressCity').value = component.long_name;
+      if (types.includes('administrative_area_level_1')) document.getElementById('addressState').value = component.short_name;
+      if (types.includes('postal_code')) document.getElementById('addressZip').value = component.long_name;
+      if (types.includes('country')) document.getElementById('addressCountry').value = component.long_name;
+    });
+
+    document.getElementById('addressStreet').value = `${streetNumber} ${streetName}`.trim();
+    document.getElementById('addressFields').classList.add('visible');
+  });
+}
+
 function initStripe() {
   if (stripe) return;
   stripe = Stripe(STRIPE_PK);
@@ -1581,6 +1659,9 @@ function openModal() {
 
   document.getElementById('checkoutModal').classList.add('visible');
   document.getElementById('checkoutError').textContent = '';
+  document.getElementById('addressFields').classList.remove('visible');
+  document.getElementById('addressSearch').value = '';
+  setTimeout(initAddressAutocomplete, 100);
   // Reset gift card
   giftCard = null;
   document.getElementById('giftupApplied').style.display = 'none';
@@ -1608,6 +1689,13 @@ async function confirmReservation() {
   const lastName = document.getElementById('guestLastName').value.trim();
   const email = document.getElementById('guestEmail').value.trim();
   const phone = document.getElementById('guestPhone').value.trim();
+  const address = {
+    street: document.getElementById('addressStreet').value.trim(),
+    city: document.getElementById('addressCity').value.trim(),
+    state: document.getElementById('addressState').value.trim(),
+    zip: document.getElementById('addressZip').value.trim(),
+    country: document.getElementById('addressCountry').value.trim(),
+  };
   const errorEl = document.getElementById('checkoutError');
   const btn = document.getElementById('btnConfirm');
 
@@ -1644,6 +1732,7 @@ async function confirmReservation() {
         ratePlanId: currentRatePlanId,
         ccToken: paymentMethod.id,
         guest: { firstName, lastName, email, phone },
+        address,
         giftCard: giftCard ? { code: giftCard.code, balance: giftCard.balance } : null,
       }),
     });
@@ -1792,6 +1881,38 @@ function formatDateTime(s) {
     <div class="form-group">
       <label class="form-label">Téléphone</label>
       <input class="form-input" id="guestPhone" type="tel" placeholder="+1 514 000 0000">
+    </div>
+
+    <div class="form-section-title">Adresse postale</div>
+    <div class="form-group address-group">
+      <label class="form-label">Rechercher votre adresse</label>
+      <input type="text" class="address-autocomplete-input" id="addressSearch" placeholder="123 Rue Principale, Montréal...">
+    </div>
+    <div class="address-fields" id="addressFields">
+      <div class="form-group">
+        <label class="form-label">Rue</label>
+        <input class="form-input" id="addressStreet" type="text" placeholder="123 Rue Principale">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Ville</label>
+          <input class="form-input" id="addressCity" type="text" placeholder="Montréal">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Province</label>
+          <input class="form-input" id="addressState" type="text" placeholder="QC">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Code postal</label>
+          <input class="form-input" id="addressZip" type="text" placeholder="H2X 1Y2">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pays</label>
+          <input class="form-input" id="addressCountry" type="text" placeholder="Canada">
+        </div>
+      </div>
     </div>
 
     <div class="form-section-title">Carte cadeau (optionnel)</div>
