@@ -1428,21 +1428,20 @@ async function applyUpsells() {
     const data = await res.json();
     console.log('Upsell applied raw:', JSON.stringify(data).substring(0, 800));
     // Met à jour le breakdown avec les nouveaux prix — structure: rates.ratePlans[].ratePlan.money
-    console.log('quote field:', JSON.stringify(data.rates?.ratePlans?.[0]?.quote).substring(0, 400));
     if (data.rates?.ratePlans) {
       const plan = data.rates.ratePlans.find(p =>
         p.ratePlan?.id === currentRatePlanId || p.ratePlan?._id === currentRatePlanId
       ) || data.rates.ratePlans[0];
-      const money = plan?.ratePlan?.money;
+      // money est dans plan.quote.money (structure upsell) ou plan.ratePlan.money (structure quote normal)
+      const money = plan?.quote?.money || plan?.ratePlan?.money;
       if (money) {
-        console.log('Updated money:', JSON.stringify(money));
         renderPriceBreakdown(money);
-        // Met aussi à jour allRatePlans pour que le switch de plan reste correct
         allRatePlans = allRatePlans.map(rp => {
           const updated = data.rates.ratePlans.find(p =>
             p.ratePlan?.id === rp.id || p.ratePlan?._id === rp.id
           );
-          if (updated?.ratePlan?.money) return { ...rp, money: updated.ratePlan.money };
+          const updatedMoney = updated?.quote?.money || updated?.ratePlan?.money;
+          if (updatedMoney) return { ...rp, money: updatedMoney };
           return rp;
         });
       }
