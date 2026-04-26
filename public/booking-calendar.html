@@ -1425,7 +1425,7 @@ async function applyUpsells() {
       body: JSON.stringify({ inquiryId: currentInquiryId, fees }),
     });
     const data = await res.json();
-    console.log('Upsell applied:', data);
+    console.log('Upsell applied raw:', JSON.stringify(data).substring(0, 800));
     // Met à jour le breakdown avec les nouveaux prix
     if (data.rates?.ratePlans) {
       const plan = data.rates.ratePlans.find(p => p.ratePlan?._id === currentRatePlanId)
