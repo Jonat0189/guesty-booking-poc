@@ -1142,15 +1142,7 @@ currentMonth = today.getMonth();
 
 init();
 
-// Init phone field once
-window.addEventListener('load', () => {
-  window.itiPhone = window.intlTelInput(document.getElementById('guestPhone'), {
-    initialCountry: 'ca',
-    preferredCountries: ['ca', 'us', 'fr'],
-    separateDialCode: true,
-    utilsScript: 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js',
-  });
-});
+
 
 async function init() {
   await loadCalendar();
@@ -1690,6 +1682,17 @@ function openModal() {
   document.getElementById('checkoutModal').classList.add('visible');
   document.getElementById('checkoutError').textContent = '';
   document.getElementById('addressFields').classList.remove('visible');
+  if (!window.itiPhone) {
+    setTimeout(() => {
+      window.itiPhone = window.intlTelInput(document.getElementById('guestPhone'), {
+        initialCountry: 'ca',
+        preferredCountries: ['ca', 'us', 'fr'],
+        separateDialCode: true,
+        autoHideDialCode: false,
+        utilsScript: 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js',
+      });
+    }, 300);
+  }
 
   document.getElementById('addressSearch').value = '';
   setTimeout(initAddressAutocomplete, 100);
