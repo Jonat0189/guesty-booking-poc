@@ -49,18 +49,18 @@ exports.handler = async (event) => {
     // POST — ajouter/retirer un upsell d'un quote
     if (event.httpMethod === "POST") {
       const body = JSON.parse(event.body || "{}");
-      const { inquiryId, additionalFeeIds } = body;
+      const { quoteId, ratePlanIds, additionalFeeIds } = body;
 
-      if (!inquiryId || !additionalFeeIds) {
+      if (!quoteId || !additionalFeeIds) {
         return {
           statusCode: 400,
           headers: CORS_HEADERS,
-          body: JSON.stringify({ error: "inquiryId et additionalFeeIds requis" }),
+          body: JSON.stringify({ error: "quoteId et additionalFeeIds requis" }),
         };
       }
 
       const res = await fetch(
-        `https://booking.guesty.com/api/reservations/upsell/${inquiryId}`,
+        `https://booking.guesty.com/api/reservations/upsell/${quoteId}`,
         {
           method: "POST",
           headers: {
@@ -68,7 +68,7 @@ exports.handler = async (event) => {
             "Content-Type": "application/json",
             Accept: "application/json; charset=utf-8",
           },
-          body: JSON.stringify({ additionalFeeIds }),
+          body: JSON.stringify({ additionalFeeIds, ratePlanIds: ratePlanIds || [] }),
         }
       );
 
