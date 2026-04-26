@@ -1427,12 +1427,23 @@ async function applyUpsells() {
     });
     const data = await res.json();
     console.log('Upsell applied raw:', JSON.stringify(data).substring(0, 800));
-    // Met à jour le breakdown avec les nouveaux prix
+    // Met à jour le breakdown avec les nouveaux prix — structure: rates.ratePlans[].ratePlan.money
     if (data.rates?.ratePlans) {
-      const plan = data.rates.ratePlans.find(p => p.ratePlan?._id === currentRatePlanId)
-        || data.rates.ratePlans[0];
-      if (plan?.ratePlan?.money) {
-        renderPriceBreakdown(plan.ratePlan.money);
+      const plan = data.rates.ratePlans.find(p =>
+        p.ratePlan?.id === currentRatePlanId || p.ratePlan?._id === currentRatePlanId
+      ) || data.rates.ratePlans[0];
+      const money = plan?.ratePlan?.money;
+      if (money) {
+        console.log('Updated money:', JSON.stringify(money));
+        renderPriceBreakdown(money);
+        // Met aussi à jour allRatePlans pour que le switch de plan reste correct
+        allRatePlans = allRatePlans.map(rp => {
+          const updated = data.rates.ratePlans.find(p =>
+            p.ratePlan?.id === rp.id || p.ratePlan?._id === rp.id
+          );
+          if (updated?.ratePlan?.money) return { ...rp, money: updated.ratePlan.money };
+          return rp;
+        });
       }
     }
   } catch (e) {
