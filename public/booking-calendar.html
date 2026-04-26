@@ -1890,12 +1890,12 @@ function formatDateTime(s) {
       <input type="text" class="address-autocomplete-input" id="addressSearch" placeholder="123 Rue Principale, Montréal...">
     </div>
     <div class="address-fields" id="addressFields">
-      <div class="form-row">
-        <div class="form-group" style="flex:3">
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+        <div class="form-group">
           <label class="form-label">Rue</label>
           <input class="form-input" id="addressStreet" type="text" placeholder="123 Rue Principale">
         </div>
-        <div class="form-group" style="flex:1;min-width:80px;max-width:100px">
+        <div class="form-group">
           <label class="form-label">Apt / Suite</label>
           <input class="form-input" id="addressApt" type="text" placeholder="# 4B">
         </div>
