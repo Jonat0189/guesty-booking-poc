@@ -84,6 +84,7 @@ exports.handler = async (event) => {
           name: rp.name,
           type: rp.type,
           cancellationPolicy: rp.cancellationPolicy,
+          inquiryId: plan.inquiryId || null,
           money: {
             fareAccommodation: rp.money?.fareAccommodation,
             fareCleaning: rp.money?.fareCleaning,
