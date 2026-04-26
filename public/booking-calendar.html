@@ -1419,6 +1419,7 @@ async function applyUpsells() {
   if (!currentInquiryId) return;
   try {
     const additionalFeeIds = Array.from(selectedUpsells);
+    console.log('Applying upsells:', { inquiryId: currentInquiryId, additionalFeeIds });
     const res = await fetch(`${BASE_URL}/guesty-upsells`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
