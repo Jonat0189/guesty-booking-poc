@@ -11,33 +11,53 @@ exports.handler = async (event) => {
     return { statusCode: 204, headers: CORS_HEADERS, body: "" };
   }
 
-  const { quoteId } = event.queryStringParameters || {};
+  const { quoteId, inquiryId } = event.queryStringParameters || {};
 
-  if (!quoteId) {
+  if (!quoteId && !inquiryId) {
     return {
       statusCode: 400,
       headers: CORS_HEADERS,
-      body: JSON.stringify({ error: "quoteId requis" }),
+      body: JSON.stringify({ error: "quoteId ou inquiryId requis" }),
     };
   }
 
   try {
     const token = await getBEToken();
+    const id = inquiryId || quoteId;
 
-    const res = await fetch(`https://booking.guesty.com/api/reservations/quotes/${quoteId}/upsell`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json; charset=utf-8",
-      },
-    });
+    // Essaie les deux patterns d'URL possibles
+    const urls = [
+      `https://booking.guesty.com/api/upsell?inquiryId=${id}`,
+      `https://booking.guesty.com/api/upsell?quoteId=${id}`,
+      `https://booking.guesty.com/api/reservations/quotes/${id}/upsell`,
+    ];
 
-    const data = await res.json();
-    console.log("Upsell response:", JSON.stringify(data));
+    let lastStatus = null;
+    let lastData = null;
+
+    for (const url of urls) {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json; charset=utf-8",
+        },
+      });
+      lastStatus = res.status;
+      lastData = await res.json();
+      console.log(`URL: ${url} → status: ${res.status}`);
+      if (res.status !== 404) {
+        return {
+          statusCode: res.status,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+          body: JSON.stringify({ url, data: lastData }),
+        };
+      }
+    }
 
     return {
-      statusCode: res.status,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      statusCode: 404,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: "Endpoint upsell introuvable", lastData }),
     };
   } catch (err) {
     return {
