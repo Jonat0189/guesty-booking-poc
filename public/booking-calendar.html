@@ -1428,6 +1428,9 @@ async function applyUpsells() {
     const data = await res.json();
     console.log('Upsell applied raw:', JSON.stringify(data).substring(0, 800));
     // Met à jour le breakdown avec les nouveaux prix — structure: rates.ratePlans[].ratePlan.money
+    console.log('First ratePlan keys:', data.rates?.ratePlans?.[0] ? Object.keys(data.rates.ratePlans[0]) : 'none');
+    console.log('First ratePlan.ratePlan keys:', data.rates?.ratePlans?.[0]?.ratePlan ? Object.keys(data.rates.ratePlans[0].ratePlan) : 'none');
+    console.log('money exists:', !!data.rates?.ratePlans?.[0]?.ratePlan?.money);
     if (data.rates?.ratePlans) {
       const plan = data.rates.ratePlans.find(p =>
         p.ratePlan?.id === currentRatePlanId || p.ratePlan?._id === currentRatePlanId
