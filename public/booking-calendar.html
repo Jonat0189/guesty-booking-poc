@@ -1142,6 +1142,16 @@ currentMonth = today.getMonth();
 
 init();
 
+// Init phone field once
+window.addEventListener('load', () => {
+  window.itiPhone = window.intlTelInput(document.getElementById('guestPhone'), {
+    initialCountry: 'ca',
+    preferredCountries: ['ca', 'us', 'fr'],
+    separateDialCode: true,
+    utilsScript: 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js',
+  });
+});
+
 async function init() {
   await loadCalendar();
   renderCalendars();
@@ -1680,15 +1690,7 @@ function openModal() {
   document.getElementById('checkoutModal').classList.add('visible');
   document.getElementById('checkoutError').textContent = '';
   document.getElementById('addressFields').classList.remove('visible');
-  // Init phone input if not already done
-  if (!window.itiPhone) {
-    window.itiPhone = window.intlTelInput(document.getElementById('guestPhone'), {
-      initialCountry: 'ca',
-      preferredCountries: ['ca', 'us', 'fr'],
-      separateDialCode: true,
-      utilsScript: 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js',
-    });
-  }
+
   document.getElementById('addressSearch').value = '';
   setTimeout(initAddressAutocomplete, 100);
   // Reset gift card
