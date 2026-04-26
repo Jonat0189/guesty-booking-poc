@@ -1419,14 +1419,12 @@ async function applyUpsells() {
   if (!currentInquiryId) return;
   try {
     const additionalFeeIds = Array.from(selectedUpsells);
-    console.log('Applying upsells:', { quoteId: currentQuoteId, ratePlanId: currentRatePlanId, additionalFeeIds });
     const res = await fetch(`${BASE_URL}/guesty-upsells`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ quoteId: currentQuoteId, ratePlanIds: [currentRatePlanId], additionalFeeIds }),
     });
     const data = await res.json();
-    console.log('Upsell applied raw:', JSON.stringify(data).substring(0, 800));
     // Met à jour le breakdown avec les nouveaux prix — structure: rates.ratePlans[].ratePlan.money
     if (data.rates?.ratePlans) {
       const plan = data.rates.ratePlans.find(p =>
