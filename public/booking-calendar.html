@@ -1418,11 +1418,11 @@ async function applyDogFee() {
 async function applyUpsells() {
   if (!currentInquiryId) return;
   try {
-    const fees = Array.from(selectedUpsells).map(id => ({ _id: id }));
+    const additionalFeeIds = Array.from(selectedUpsells);
     const res = await fetch(`${BASE_URL}/guesty-upsells`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ inquiryId: currentInquiryId, fees }),
+      body: JSON.stringify({ inquiryId: currentInquiryId, additionalFeeIds }),
     });
     const data = await res.json();
     console.log('Upsell applied raw:', JSON.stringify(data).substring(0, 800));

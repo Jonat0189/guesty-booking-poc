@@ -49,13 +49,13 @@ exports.handler = async (event) => {
     // POST — ajouter/retirer un upsell d'un quote
     if (event.httpMethod === "POST") {
       const body = JSON.parse(event.body || "{}");
-      const { inquiryId, fees } = body;
+      const { inquiryId, additionalFeeIds } = body;
 
-      if (!inquiryId || !fees) {
+      if (!inquiryId || !additionalFeeIds) {
         return {
           statusCode: 400,
           headers: CORS_HEADERS,
-          body: JSON.stringify({ error: "inquiryId et fees requis" }),
+          body: JSON.stringify({ error: "inquiryId et additionalFeeIds requis" }),
         };
       }
 
@@ -68,7 +68,7 @@ exports.handler = async (event) => {
             "Content-Type": "application/json",
             Accept: "application/json; charset=utf-8",
           },
-          body: JSON.stringify({ fees }),
+          body: JSON.stringify({ additionalFeeIds }),
         }
       );
 
