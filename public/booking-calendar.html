@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BESIDE — Réservation Le Pionnier</title>
 <script src="https://js.stripe.com/v3/"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCthmTJQQsSt07SRL5vRAZ7STRP6GjS_d4&libraries=places,maps&v=beta"></script>
+<script>
+(g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})
+({key: "AIzaSyCthmTJQQsSt07SRL5vRAZ7STRP6GjS_d4", v: "beta"});
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1545,14 +1548,14 @@ const STRIPE_PK = 'pk_live_B8nMGXqMZWzhrWLGfDCCOsYa00ec0helwd';
 let stripe = null;
 let cardNumber = null, cardExpiry = null, cardCvc = null;
 
-function initAddressAutocomplete() {
-  if (!window.google?.maps?.places?.PlaceAutocompleteElement) return;
+async function initAddressAutocomplete() {
+  const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
 
   // Retire l'ancien élément si déjà initialisé
   const wrapper = document.getElementById('addressAutocompleteWrapper');
   wrapper.innerHTML = '';
 
-  const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
+  const placeAutocomplete = new PlaceAutocompleteElement({
     types: ['address'],
     componentRestrictions: { country: ['ca', 'us'] },
   });
