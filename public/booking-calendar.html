@@ -1691,6 +1691,7 @@ async function confirmReservation() {
   const phone = document.getElementById('guestPhone').value.trim();
   const address = {
     street: document.getElementById('addressStreet').value.trim(),
+    apt: document.getElementById('addressApt').value.trim(),
     city: document.getElementById('addressCity').value.trim(),
     state: document.getElementById('addressState').value.trim(),
     zip: document.getElementById('addressZip').value.trim(),
@@ -1889,9 +1890,15 @@ function formatDateTime(s) {
       <input type="text" class="address-autocomplete-input" id="addressSearch" placeholder="123 Rue Principale, Montréal...">
     </div>
     <div class="address-fields" id="addressFields">
-      <div class="form-group">
-        <label class="form-label">Rue</label>
-        <input class="form-input" id="addressStreet" type="text" placeholder="123 Rue Principale">
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label class="form-label">Rue</label>
+          <input class="form-input" id="addressStreet" type="text" placeholder="123 Rue Principale">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Apt / Suite</label>
+          <input class="form-input" id="addressApt" type="text" placeholder="# 4B">
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group">
