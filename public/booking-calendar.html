@@ -433,6 +433,107 @@ body {
   font-style: italic;
 }
 
+/* UPSELLS */
+.upsell-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--parchment);
+}
+
+.upsell-section-title {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--stone);
+  margin-bottom: 10px;
+}
+
+.upsell-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upsell-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1.5px solid var(--parchment);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: white;
+}
+
+.upsell-card:hover { border-color: var(--mist); background: #faf9f6; }
+
+.upsell-card.selected {
+  border-color: var(--forest);
+  background: rgba(26,46,30,0.03);
+}
+
+.upsell-card-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.upsell-card-img-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  background: var(--parchment);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.upsell-card-info { flex: 1; }
+
+.upsell-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--forest);
+  margin-bottom: 2px;
+}
+
+.upsell-card-desc {
+  font-size: 11px;
+  color: var(--stone);
+}
+
+.upsell-card-price {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--charcoal);
+  white-space: nowrap;
+}
+
+.upsell-card-check {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--parchment);
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: transparent;
+  transition: all 0.15s;
+}
+
+.upsell-card.selected .upsell-card-check {
+  background: var(--forest);
+  border-color: var(--forest);
+  color: white;
+}
+
 /* RATE PLANS */
 .rate-plans {
   display: grid;
@@ -888,6 +989,15 @@ body {
           </div>
         </div>
 
+        <div class="guests-row">
+          <span class="guests-label">Chiens</span>
+          <div class="guests-controls">
+            <button class="guests-btn" onclick="changeDogs(-1)">−</button>
+            <span class="guests-count" id="dogsDisplay">0</span>
+            <button class="guests-btn" onclick="changeDogs(1)">+</button>
+          </div>
+        </div>
+
         <div id="quoteLoading" class="quote-loading" style="display:none">
           <div class="spinner"></div>
           Calcul du tarif...
@@ -896,6 +1006,12 @@ body {
         <div id="ratePlansContainer" style="display:none">
           <div class="rate-plans" id="ratePlanCards"></div>
           <div id="priceBreakdown" class="price-breakdown" style="display:none"></div>
+        </div>
+
+        <!-- UPSELLS -->
+        <div class="upsell-section" id="upsellSection" style="display:none">
+          <div class="upsell-section-title">Services optionnels</div>
+          <div class="upsell-cards" id="upsellCards"></div>
         </div>
 
         <!-- COUPON -->
@@ -939,12 +1055,22 @@ let currentYear, currentMonth;
 let calendarData = {}; // { "YYYY-MM-DD": dayObj }
 let checkIn = null, checkOut = null;
 let guestsCount = 2;
+let dogsCount = 0;
 let currentQuoteId = null;
 let currentRatePlanId = null;
+let currentInquiryId = null;
 let allRatePlans = [];
+let allUpsells = []; // upsells disponibles depuis Guesty
+let selectedUpsells = new Set(); // IDs des upsells sélectionnés
 let appliedCoupon = null;
 let giftCard = null; // { code, balance, currency }
 let quoteTimeout = null;
+
+// IDs fixes des frais Guesty
+const UPSELL_IDS = {
+  LATE_CHECKOUT: '668eaa7a7b4500000f042be5',
+  PET: '66705e57cbb553000ebe5177',
+};
 
 // Init
 const today = new Date();
@@ -1078,8 +1204,13 @@ function updateDatesDisplay() {
   document.getElementById('nightsBadge').textContent = `${nights} nuit${nights > 1 ? 's' : ''}`;
   document.getElementById('priceBreakdown').style.display = 'none';
   document.getElementById('ratePlansContainer').style.display = 'none';
+  document.getElementById('upsellSection').style.display = 'none';
   document.getElementById('btnReserve').disabled = true;
   document.getElementById('quoteIdNote').textContent = '';
+  selectedUpsells.clear();
+  allUpsells = [];
+  dogsCount = 0;
+  document.getElementById('dogsDisplay').textContent = '0';
 }
 
 function scheduleQuote() {
@@ -1111,6 +1242,8 @@ async function fetchQuote() {
 
     currentQuoteId = data.quoteId;
     allRatePlans = data.ratePlans || [];
+    // Prend l'inquiryId du premier rate plan
+    currentInquiryId = allRatePlans[0]?.inquiryId || null;
     document.getElementById('quoteIdNote').textContent = `Tarif garanti jusqu'au ${formatDateTime(data.expiresAt)}`;
     document.getElementById('couponSection').style.display = 'block';
     // Reset coupon si nouvelles dates
@@ -1172,6 +1305,12 @@ function changeGuests(delta) {
   if (checkIn && checkOut) scheduleQuote();
 }
 
+function changeDogs(delta) {
+  dogsCount = Math.max(0, Math.min(2, dogsCount + delta));
+  document.getElementById('dogsDisplay').textContent = dogsCount;
+  if (currentInquiryId) applyDogFee();
+}
+
 function renderRatePlans(plans) {
   const container = document.getElementById('ratePlanCards');
   const policyLabels = {
@@ -1199,6 +1338,7 @@ function renderRatePlans(plans) {
 
 function selectRatePlan(planId) {
   currentRatePlanId = planId;
+  currentInquiryId = allRatePlans.find(p => p.id === planId)?.inquiryId || currentInquiryId;
   // Update card styles
   document.querySelectorAll('.rate-plan-card').forEach(c => c.classList.remove('selected'));
   const card = document.getElementById(`rp-${planId}`);
@@ -1208,6 +1348,94 @@ function selectRatePlan(planId) {
   if (plan) {
     renderPriceBreakdown(plan.money);
     document.getElementById('btnReserve').disabled = false;
+  }
+  // Load upsells
+  selectedUpsells.clear();
+  if (currentInquiryId) loadUpsells();
+}
+
+async function loadUpsells() {
+  try {
+    const res = await fetch(`${BASE_URL}/guesty-upsells?inquiryId=${currentInquiryId}&listingId=${LISTING_ID}`);
+    const data = await res.json();
+    // Filtre le frais chien — géré par le sélecteur de chiens
+    allUpsells = Array.isArray(data) ? data.filter(u => u._id !== UPSELL_IDS.PET) : [];
+    renderUpsells();
+    // Si chiens > 0, applique le frais chien
+    if (dogsCount > 0) applyDogFee();
+  } catch (e) {
+    console.error('Upsell load error:', e);
+  }
+}
+
+function renderUpsells() {
+  const section = document.getElementById('upsellSection');
+  const container = document.getElementById('upsellCards');
+
+  if (!allUpsells.length) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  container.innerHTML = allUpsells.map(u => {
+    const img = u.upsell?.images?.[0]?.url
+      ? `<img class="upsell-card-img" src="${u.upsell.images[0].url}" alt="${u.name}">`
+      : `<div class="upsell-card-img-placeholder">✨</div>`;
+    const isSelected = selectedUpsells.has(u._id);
+    return `
+      <div class="upsell-card ${isSelected ? 'selected' : ''}" id="upsell-${u._id}" onclick="toggleUpsell('${u._id}')">
+        ${img}
+        <div class="upsell-card-info">
+          <div class="upsell-card-name">${u.name}</div>
+          <div class="upsell-card-desc">${u.upsell?.description || ''}</div>
+        </div>
+        <div class="upsell-card-price">+${fmtPrice(u.price)}</div>
+        <div class="upsell-card-check">${isSelected ? '✓' : ''}</div>
+      </div>`;
+  }).join('');
+}
+
+async function toggleUpsell(feeId) {
+  if (selectedUpsells.has(feeId)) {
+    selectedUpsells.delete(feeId);
+  } else {
+    selectedUpsells.add(feeId);
+  }
+  renderUpsells();
+  await applyUpsells();
+}
+
+async function applyDogFee() {
+  if (dogsCount > 0) {
+    selectedUpsells.add(UPSELL_IDS.PET);
+  } else {
+    selectedUpsells.delete(UPSELL_IDS.PET);
+  }
+  await applyUpsells();
+}
+
+async function applyUpsells() {
+  if (!currentInquiryId) return;
+  try {
+    const fees = Array.from(selectedUpsells).map(id => ({ _id: id }));
+    const res = await fetch(`${BASE_URL}/guesty-upsells`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inquiryId: currentInquiryId, fees }),
+    });
+    const data = await res.json();
+    console.log('Upsell applied:', data);
+    // Met à jour le breakdown avec les nouveaux prix
+    if (data.rates?.ratePlans) {
+      const plan = data.rates.ratePlans.find(p => p.ratePlan?._id === currentRatePlanId)
+        || data.rates.ratePlans[0];
+      if (plan?.ratePlan?.money) {
+        renderPriceBreakdown(plan.ratePlan.money);
+      }
+    }
+  } catch (e) {
+    console.error('Upsell apply error:', e);
   }
 }
 
