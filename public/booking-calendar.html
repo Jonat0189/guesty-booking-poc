@@ -1505,14 +1505,34 @@ async function applyUpsells() {
       const money = plan?.quote?.money || plan?.ratePlan?.money;
       if (money) {
         renderPriceBreakdown(money);
+        // Calcule le delta du plan actif pour l'appliquer aux autres plans
+        const activePlanOriginal = allRatePlans.find(rp => rp.id === currentRatePlanId);
+        const activePlanUpdated = data.rates.ratePlans.find(p =>
+          p.ratePlan?.id === currentRatePlanId || p.ratePlan?._id === currentRatePlanId
+        );
+        const updatedActiveMoney = activePlanUpdated?.quote?.money || activePlanUpdated?.ratePlan?.money;
+        const delta = updatedActiveMoney && activePlanOriginal
+          ? updatedActiveMoney.hostPayout - activePlanOriginal._originalHostPayout
+          : 0;
+
         allRatePlans = allRatePlans.map(rp => {
+          // Sauvegarde le prix original si pas encore fait
+          if (rp._originalHostPayout === undefined) rp._originalHostPayout = rp.money.hostPayout;
+
           const updated = data.rates.ratePlans.find(p =>
             p.ratePlan?.id === rp.id || p.ratePlan?._id === rp.id
           );
           const updatedMoney = updated?.quote?.money || updated?.ratePlan?.money;
-          if (updatedMoney) return { ...rp, money: updatedMoney };
-          return rp;
+
+          if (updatedMoney) {
+            // Plan actif — utilise les données Guesty directement
+            return { ...rp, money: updatedMoney };
+          } else {
+            // Autres plans — applique le même delta
+            return { ...rp, money: { ...rp.money, hostPayout: rp._originalHostPayout + delta } };
+          }
         });
+
         // Met à jour les prix affichés dans les cartes rate plan
         allRatePlans.forEach(rp => {
           const priceEl = document.querySelector(`#rp-${rp.id} .rp-price`);
