@@ -1521,6 +1521,61 @@ async function applyUpsells() {
   }
 }
 
+// Phone formatting
+const PHONE_FORMATS = {
+  '+1':   { placeholder: '514 000 0000', length: 10 },
+  '+1us': { placeholder: '212 000 0000', length: 10 },
+  '+33':  { placeholder: '6 12 34 56 78', length: 9 },
+  '+44':  { placeholder: '7700 900000', length: 10 },
+  '+49':  { placeholder: '151 00000000', length: 11 },
+  '+32':  { placeholder: '470 00 00 00', length: 9 },
+  '+41':  { placeholder: '79 000 00 00', length: 9 },
+  '+61':  { placeholder: '412 000 000', length: 9 },
+  '+55':  { placeholder: '11 90000 0000', length: 11 },
+  '+52':  { placeholder: '55 1234 5678', length: 10 },
+};
+
+function formatPhone(input) {
+  // Garde seulement les chiffres
+  let digits = input.value.replace(/\D/g, '');
+  const country = document.getElementById('phoneCountry').value;
+  const fmt = PHONE_FORMATS[country] || PHONE_FORMATS['+1'];
+
+  // Format NA (+1): xxx xxx xxxx
+  if (country === '+1' || country === '+1us') {
+    if (digits.length > 10) digits = digits.substring(0, 10);
+    let formatted = '';
+    if (digits.length > 6) formatted = digits.substring(0,3) + ' ' + digits.substring(3,6) + ' ' + digits.substring(6);
+    else if (digits.length > 3) formatted = digits.substring(0,3) + ' ' + digits.substring(3);
+    else formatted = digits;
+    input.value = formatted;
+  } else {
+    input.value = digits;
+  }
+
+  // Validation checkmark
+  const check = document.getElementById('phoneCheck');
+  const isValid = digits.length >= fmt.length;
+  check.style.display = isValid ? 'block' : 'none';
+  check.style.color = 'var(--sage)';
+  input.style.borderColor = digits.length > 0 ? (isValid ? 'var(--sage)' : 'var(--parchment)') : 'var(--parchment)';
+}
+
+function validateEmail(input) {
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value.trim());
+  const check = document.getElementById('emailCheck');
+  check.style.display = valid ? 'block' : 'none';
+  input.style.borderColor = input.value.length > 0 ? (valid ? 'var(--sage)' : 'var(--parchment)') : 'var(--parchment)';
+}
+
+function updatePhonePlaceholder() {
+  const country = document.getElementById('phoneCountry').value;
+  const fmt = PHONE_FORMATS[country] || PHONE_FORMATS['+1'];
+  document.getElementById('guestPhone').placeholder = fmt.placeholder;
+  document.getElementById('guestPhone').value = '';
+  document.getElementById('phoneCheck').style.display = 'none';
+}
+
 // GiftUp
 async function applyGiftCard() {
   const code = document.getElementById('giftupInput').value.trim().toUpperCase();
@@ -1910,12 +1965,15 @@ function formatDateTime(s) {
     </div>
     <div class="form-group">
       <label class="form-label">Courriel</label>
-      <input class="form-input" id="guestEmail" type="email" placeholder="jean@exemple.com">
+      <div style="position:relative">
+        <input class="form-input" id="guestEmail" type="email" inputmode="email" placeholder="jean@exemple.com" oninput="validateEmail(this)" style="padding-right:32px">
+        <span id="emailCheck" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--sage);display:none">✓</span>
+      </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Téléphone</label>
+      <label class="form-label">Cellulaire</label>
       <div class="phone-row">
-        <select class="country-select" id="phoneCountry">
+        <select class="country-select" id="phoneCountry" onchange="updatePhonePlaceholder()">
           <option value="+1">🇨🇦 +1</option>
           <option value="+1us">🇺🇸 +1</option>
           <option value="+33">🇫🇷 +33</option>
@@ -1927,7 +1985,10 @@ function formatDateTime(s) {
           <option value="+55">🇧🇷 +55</option>
           <option value="+52">🇲🇽 +52</option>
         </select>
-        <input class="form-input" id="guestPhone" type="tel" placeholder="514 000 0000">
+        <div style="position:relative">
+          <input class="form-input" id="guestPhone" type="tel" inputmode="numeric" placeholder="514 000 0000" oninput="formatPhone(this)" style="padding-right:32px">
+          <span id="phoneCheck" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:14px;display:none">✓</span>
+        </div>
       </div>
     </div>
 
