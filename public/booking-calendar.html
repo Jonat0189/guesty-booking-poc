@@ -1421,8 +1421,7 @@ function selectRatePlan(planId) {
     renderPriceBreakdown(plan.money);
     document.getElementById('btnReserve').disabled = false;
   }
-  // Load upsells
-  selectedUpsells.clear();
+  // Load upsells en conservant la sélection actuelle
   if (currentInquiryId) loadUpsells();
 }
 
@@ -1513,6 +1512,11 @@ async function applyUpsells() {
           const updatedMoney = updated?.quote?.money || updated?.ratePlan?.money;
           if (updatedMoney) return { ...rp, money: updatedMoney };
           return rp;
+        });
+        // Met à jour les prix affichés dans les cartes rate plan
+        allRatePlans.forEach(rp => {
+          const priceEl = document.querySelector(`#rp-${rp.id} .rp-price`);
+          if (priceEl) priceEl.textContent = `${Number(rp.money.hostPayout).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
         });
       }
     }
