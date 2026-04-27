@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BESIDE — Réservation Le Pionnier</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCthmTJQQsSt07SRL5vRAZ7STRP6GjS_d4&libraries=places"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -910,22 +908,31 @@ body {
 .address-fields.visible { display: flex; }
 
 /* PHONE FIELD */
-.iti { width: 100%; }
-.iti__flag-container { z-index: 200; }
-.iti input {
-  width: 100%;
-  padding: 10px 12px 10px 52px;
+.phone-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+}
+
+.country-select {
+  padding: 10px 8px;
   border: 1px solid var(--parchment);
   border-radius: 8px;
   font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--charcoal);
+  background: white;
   outline: none;
+  cursor: pointer;
   transition: border-color 0.15s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239e9488'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
 }
-.iti input:focus { border-color: var(--sage); }
-.iti__selected-flag { border-radius: 8px 0 0 8px; padding: 0 8px 0 10px; }
-.iti__country-list { border-radius: 8px; border: 1px solid var(--parchment); box-shadow: 0 4px 16px rgba(0,0,0,0.08); font-family: 'DM Sans', sans-serif; font-size: 13px; }
+
+.country-select:focus { border-color: var(--sage); }
 
 .secure-note {
   text-align: center;
@@ -1682,17 +1689,7 @@ function openModal() {
   document.getElementById('checkoutModal').classList.add('visible');
   document.getElementById('checkoutError').textContent = '';
   document.getElementById('addressFields').classList.remove('visible');
-  if (!window.itiPhone) {
-    setTimeout(() => {
-      window.itiPhone = window.intlTelInput(document.getElementById('guestPhone'), {
-        initialCountry: 'ca',
-        preferredCountries: ['ca', 'us', 'fr'],
-        separateDialCode: true,
-        autoHideDialCode: false,
-        utilsScript: 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.js',
-      });
-    }, 300);
-  }
+
 
   document.getElementById('addressSearch').value = '';
   setTimeout(initAddressAutocomplete, 100);
@@ -1722,7 +1719,9 @@ async function confirmReservation() {
   const firstName = document.getElementById('guestFirstName').value.trim();
   const lastName = document.getElementById('guestLastName').value.trim();
   const email = document.getElementById('guestEmail').value.trim();
-  const phone = window.itiPhone ? window.itiPhone.getNumber() : document.getElementById('guestPhone').value.trim();
+  const phoneCountry = document.getElementById('phoneCountry').value.replace('us', '');
+  const phoneNumber = document.getElementById('guestPhone').value.trim().replace(/[^0-9]/g, '');
+  const phone = `${phoneCountry}${phoneNumber}`;
   const address = {
     street: document.getElementById('addressStreet').value.trim(),
     apt: document.getElementById('addressApt').value.trim(),
@@ -1915,7 +1914,21 @@ function formatDateTime(s) {
     </div>
     <div class="form-group">
       <label class="form-label">Téléphone</label>
-      <input id="guestPhone" type="tel" placeholder="514 000 0000">
+      <div class="phone-row">
+        <select class="country-select" id="phoneCountry">
+          <option value="+1">🇨🇦 +1</option>
+          <option value="+1us">🇺🇸 +1</option>
+          <option value="+33">🇫🇷 +33</option>
+          <option value="+44">🇬🇧 +44</option>
+          <option value="+49">🇩🇪 +49</option>
+          <option value="+32">🇧🇪 +32</option>
+          <option value="+41">🇨🇭 +41</option>
+          <option value="+61">🇦🇺 +61</option>
+          <option value="+55">🇧🇷 +55</option>
+          <option value="+52">🇲🇽 +52</option>
+        </select>
+        <input class="form-input" id="guestPhone" type="tel" placeholder="514 000 0000">
+      </div>
     </div>
 
     <div class="form-section-title">Adresse postale</div>
