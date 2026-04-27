@@ -1314,6 +1314,7 @@ async function fetchQuote() {
 
     currentQuoteId = data.quoteId;
     allRatePlans = data.ratePlans || [];
+
     // Prend l'inquiryId du premier rate plan
     currentInquiryId = allRatePlans[0]?.inquiryId || null;
     document.getElementById('quoteIdNote').textContent = `Tarif garanti jusqu'au ${formatDateTime(data.expiresAt)}`;
@@ -1487,15 +1488,25 @@ async function applyDogFee() {
 }
 
 async function applyUpsells() {
-  if (!currentInquiryId) return;
+  if (!currentQuoteId) return;
+  const additionalFeeIds = Array.from(selectedUpsells);
   try {
-    const additionalFeeIds = Array.from(selectedUpsells);
-    const res = await fetch(`${BASE_URL}/guesty-upsells`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quoteId: currentQuoteId, ratePlanIds: [currentRatePlanId], additionalFeeIds }),
-    });
-    const data = await res.json();
+    // Appelle le POST pour tous les rate plans en parallèle
+    const results = await Promise.all(
+      allRatePlans.map(rp =>
+        fetch(`${BASE_URL}/guesty-upsells`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            quoteId: currentQuoteId,
+            ratePlanIds: [rp.id],
+            additionalFeeIds,
+          }),
+        }).then(r => r.json())
+      )
+    );
+    const activeIndex = allRatePlans.findIndex(rp => rp.id === currentRatePlanId);
+    const data = results[activeIndex] || results[0];
     // Met à jour le breakdown avec les nouveaux prix — structure: rates.ratePlans[].ratePlan.money
     if (data.rates?.ratePlans) {
       const plan = data.rates.ratePlans.find(p =>
@@ -1505,32 +1516,15 @@ async function applyUpsells() {
       const money = plan?.quote?.money || plan?.ratePlan?.money;
       if (money) {
         renderPriceBreakdown(money);
-        // Calcule le delta du plan actif pour l'appliquer aux autres plans
-        const activePlanOriginal = allRatePlans.find(rp => rp.id === currentRatePlanId);
-        const activePlanUpdated = data.rates.ratePlans.find(p =>
-          p.ratePlan?.id === currentRatePlanId || p.ratePlan?._id === currentRatePlanId
-        );
-        const updatedActiveMoney = activePlanUpdated?.quote?.money || activePlanUpdated?.ratePlan?.money;
-        const delta = updatedActiveMoney && activePlanOriginal
-          ? updatedActiveMoney.hostPayout - activePlanOriginal._originalHostPayout
-          : 0;
-
-        allRatePlans = allRatePlans.map(rp => {
-          // Sauvegarde le prix original si pas encore fait
-          if (rp._originalHostPayout === undefined) rp._originalHostPayout = rp.money.hostPayout;
-
-          const updated = data.rates.ratePlans.find(p =>
+        // Met à jour chaque plan avec sa propre réponse Guesty
+        allRatePlans = allRatePlans.map((rp, i) => {
+          const rpData = results[i];
+          const updatedPlan = rpData?.rates?.ratePlans?.find(p =>
             p.ratePlan?.id === rp.id || p.ratePlan?._id === rp.id
           );
-          const updatedMoney = updated?.quote?.money || updated?.ratePlan?.money;
-
-          if (updatedMoney) {
-            // Plan actif — utilise les données Guesty directement
-            return { ...rp, money: updatedMoney };
-          } else {
-            // Autres plans — applique le même delta
-            return { ...rp, money: { ...rp.money, hostPayout: rp._originalHostPayout + delta } };
-          }
+          const updatedMoney = updatedPlan?.quote?.money || updatedPlan?.ratePlan?.money;
+          if (updatedMoney) return { ...rp, money: updatedMoney };
+          return rp;
         });
 
         // Met à jour les prix affichés dans les cartes rate plan
